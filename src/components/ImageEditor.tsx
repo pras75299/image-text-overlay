@@ -209,3 +209,6 @@ export const ImageEditor = () => {
       </div>
     </Card>
   );
+};
+
+export default ImageEditor;
