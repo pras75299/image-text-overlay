@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Canvas as FabricCanvas } from "fabric";
+import { Canvas as FabricCanvas, Image as FabricImage, IText } from "fabric";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,7 +36,7 @@ export const ImageEditor = () => {
     const reader = new FileReader();
     reader.onload = (event) => {
       const imgData = event.target?.result as string;
-      fabric.Image.fromURL(imgData, (img) => {
+      FabricImage.fromURL(imgData, (img) => {
         // Scale image to fit canvas
         const scale = Math.min(
           fabricCanvas.width! / img.width!,
@@ -44,7 +44,9 @@ export const ImageEditor = () => {
         );
         img.scale(scale);
         
-        fabricCanvas.setBackgroundImage(img, fabricCanvas.renderAll.bind(fabricCanvas));
+        fabricCanvas.setBackgroundImage(img, () => {
+          fabricCanvas.renderAll();
+        });
         toast("Image uploaded successfully!");
       });
     };
@@ -54,7 +56,7 @@ export const ImageEditor = () => {
   const addText = () => {
     if (!fabricCanvas) return;
 
-    const text = new fabric.IText("Double click to edit", {
+    const text = new IText("Double click to edit", {
       left: 100,
       top: 100,
       fontSize: fontSize,
@@ -74,6 +76,7 @@ export const ImageEditor = () => {
     const dataURL = fabricCanvas.toDataURL({
       format: "png",
       quality: 1,
+      multiplier: 1,
     });
 
     const link = document.createElement("a");
