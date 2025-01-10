@@ -38,9 +38,6 @@ export const ImageEditor = () => {
     reader.onload = (event) => {
       const imgData = event.target?.result as string;
       FabricImage.fromURL(imgData).then((img) => {
-        // Clear existing canvas content
-        fabricCanvas.clear();
-        
         // Scale image to fit canvas while maintaining aspect ratio
         const scale = Math.min(
           fabricCanvas.width! / img.width!,
@@ -54,8 +51,9 @@ export const ImageEditor = () => {
         img.left = (fabricCanvas.width! - img.width! * scale) / 2;
         img.top = (fabricCanvas.height! - img.height! * scale) / 2;
         
-        // Set as background image
-        fabricCanvas.backgroundImage = img;
+        // Add the image as a regular object (not background) and send it to front
+        fabricCanvas.add(img);
+        img.bringToFront();
         fabricCanvas.renderAll();
         toast.success("Image uploaded successfully!");
       });
@@ -78,6 +76,8 @@ export const ImageEditor = () => {
 
     fabricCanvas.add(text);
     fabricCanvas.setActiveObject(text);
+    // Send text to back to ensure it appears behind images
+    text.sendToBack();
     fabricCanvas.renderAll();
     toast.success("Text added! Double click to edit");
   };
@@ -107,7 +107,7 @@ export const ImageEditor = () => {
         <div className="relative">
           <div className="border-2 border-dashed border-gray-200 rounded-lg overflow-hidden bg-gray-50 hover:border-gray-300 transition-colors">
             <canvas ref={canvasRef} className="max-w-full" />
-            {!fabricCanvas?.backgroundImage && (
+            {fabricCanvas?.getObjects().length === 0 && (
               <div className="absolute inset-0 flex items-center justify-center text-gray-400">
                 <p className="text-center">
                   Upload an image to get started
