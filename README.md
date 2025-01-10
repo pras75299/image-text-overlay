@@ -1,14 +1,6 @@
-# Welcome to your Lovable project
+# Welcome to Overlayly
 
 ## Project info
-
-**URL**: https://lovable.dev/projects/68cb8ecc-009e-441e-98f3-2da53e187dcf
-
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
 
 Simply visit the [Lovable Project](https://lovable.dev/projects/68cb8ecc-009e-441e-98f3-2da53e187dcf) and start prompting.
 

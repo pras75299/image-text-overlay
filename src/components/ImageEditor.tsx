@@ -43,14 +43,14 @@ export const ImageEditor = () => {
           fabricCanvas.width! / img.width!,
           fabricCanvas.height! / img.height!
         );
-        
+
         img.scaleX = scale;
         img.scaleY = scale;
-        
+
         // Center the image
         img.left = (fabricCanvas.width! - img.width! * scale) / 2;
         img.top = (fabricCanvas.height! - img.height! * scale) / 2;
-        
+
         // Add the image as a regular object (not background)
         fabricCanvas.add(img);
         // Move image to front using correct canvas method
@@ -113,7 +113,9 @@ export const ImageEditor = () => {
                 <p className="text-center">
                   Upload an image to get started
                   <br />
-                  <span className="text-sm">Supported formats: PNG, JPG, JPEG</span>
+                  <span className="text-sm">
+                    Supported formats: PNG, JPG, JPEG
+                  </span>
                 </p>
               </div>
             )}
@@ -124,7 +126,10 @@ export const ImageEditor = () => {
         <div className="space-y-6">
           {/* Image Upload */}
           <div>
-            <Label htmlFor="image-upload" className="text-lg font-semibold text-gray-700 mb-2">
+            <Label
+              htmlFor="image-upload"
+              className="text-lg font-semibold text-gray-700 mb-2"
+            >
               Upload Image
             </Label>
             <div className="relative">
@@ -147,8 +152,8 @@ export const ImageEditor = () => {
 
           {/* Text Controls */}
           <div className="space-y-4">
-            <Button 
-              onClick={addText} 
+            <Button
+              onClick={addText}
               className="w-full bg-purple-600 hover:bg-purple-700 text-white"
             >
               <Type className="mr-2 h-4 w-4" />
@@ -156,15 +161,17 @@ export const ImageEditor = () => {
             </Button>
 
             <div>
-              <Label className="text-sm font-medium text-gray-700">Font Size</Label>
+              <Label className="text-sm font-medium text-gray-700">
+                Font Size
+              </Label>
               <div className="mt-1">
                 <Slider
                   value={[fontSize]}
                   onValueChange={(value) => {
                     setFontSize(value[0]);
                     const activeObject = fabricCanvas?.getActiveObject();
-                    if (activeObject && 'fontSize' in activeObject) {
-                      activeObject.set('fontSize', value[0]);
+                    if (activeObject && "fontSize" in activeObject) {
+                      activeObject.set("fontSize", value[0]);
                       fabricCanvas?.renderAll();
                     }
                   }}
@@ -173,12 +180,17 @@ export const ImageEditor = () => {
                   step={1}
                   className="my-2"
                 />
-                <div className="text-sm text-gray-500 text-right">{fontSize}px</div>
+                <div className="text-sm text-gray-500 text-right">
+                  {fontSize}px
+                </div>
               </div>
             </div>
 
             <div>
-              <Label htmlFor="text-color" className="text-sm font-medium text-gray-700">
+              <Label
+                htmlFor="text-color"
+                className="text-sm font-medium text-gray-700"
+              >
                 Text Color
               </Label>
               <Input
@@ -188,8 +200,8 @@ export const ImageEditor = () => {
                 onChange={(e) => {
                   setTextColor(e.target.value);
                   const activeObject = fabricCanvas?.getActiveObject();
-                  if (activeObject && 'fill' in activeObject) {
-                    activeObject.set('fill', e.target.value);
+                  if (activeObject && "fill" in activeObject) {
+                    activeObject.set("fill", e.target.value);
                     fabricCanvas?.renderAll();
                   }
                 }}
@@ -199,8 +211,8 @@ export const ImageEditor = () => {
           </div>
 
           {/* Download */}
-          <Button 
-            onClick={downloadImage} 
+          <Button
+            onClick={downloadImage}
             className="w-full bg-green-600 hover:bg-green-700 text-white"
           >
             <Download className="mr-2 h-4 w-4" />
