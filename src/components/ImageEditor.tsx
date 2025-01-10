@@ -37,25 +37,30 @@ export const ImageEditor = () => {
     const reader = new FileReader();
     reader.onload = (event) => {
       const imgData = event.target?.result as string;
-      FabricImage.fromURL(imgData, (img) => {
-        // Clear existing background
-        fabricCanvas.clear();
-        
-        // Scale image to fit canvas while maintaining aspect ratio
-        const scale = Math.min(
-          fabricCanvas.width! / img.width!,
-          fabricCanvas.height! / img.height!
-        );
-        
-        img.scaleX = scale;
-        img.scaleY = scale;
-        
-        // Center the image
-        img.left = (fabricCanvas.width! - img.width! * scale) / 2;
-        img.top = (fabricCanvas.height! - img.height! * scale) / 2;
-        
-        fabricCanvas.setBackgroundImage(img, fabricCanvas.renderAll.bind(fabricCanvas));
-        toast.success("Image uploaded successfully!");
+      FabricImage.fromURL(imgData, {
+        crossOrigin: 'anonymous',
+        callback: (img) => {
+          // Clear existing canvas content
+          fabricCanvas.clear();
+          
+          // Scale image to fit canvas while maintaining aspect ratio
+          const scale = Math.min(
+            fabricCanvas.width! / img.width!,
+            fabricCanvas.height! / img.height!
+          );
+          
+          img.scaleX = scale;
+          img.scaleY = scale;
+          
+          // Center the image
+          img.left = (fabricCanvas.width! - img.width! * scale) / 2;
+          img.top = (fabricCanvas.height! - img.height! * scale) / 2;
+          
+          // Set as background image
+          fabricCanvas.backgroundImage = img;
+          fabricCanvas.renderAll();
+          toast.success("Image uploaded successfully!");
+        }
       });
     };
     reader.readAsDataURL(file);
