@@ -51,9 +51,10 @@ export const ImageEditor = () => {
         img.left = (fabricCanvas.width! - img.width! * scale) / 2;
         img.top = (fabricCanvas.height! - img.height! * scale) / 2;
         
-        // Add the image as a regular object (not background) and send it to front
+        // Add the image as a regular object (not background)
         fabricCanvas.add(img);
-        img.bringToFront();
+        // Move image to front using canvas method
+        fabricCanvas.bringToFront(img);
         fabricCanvas.renderAll();
         toast.success("Image uploaded successfully!");
       });
@@ -76,8 +77,8 @@ export const ImageEditor = () => {
 
     fabricCanvas.add(text);
     fabricCanvas.setActiveObject(text);
-    // Send text to back to ensure it appears behind images
-    text.sendToBack();
+    // Send text to back using canvas method
+    fabricCanvas.sendToBack(text);
     fabricCanvas.renderAll();
     toast.success("Text added! Double click to edit");
   };
