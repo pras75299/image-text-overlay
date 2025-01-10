@@ -99,3 +99,10 @@
     @apply bg-background text-foreground;
   }
 }
+
+@media(max-width:992px){
+  .canvas-container{
+    width: 100% !important;
+  }
+
+}

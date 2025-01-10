@@ -103,7 +103,7 @@ export const ImageEditor = () => {
 
   return (
     <Card className="bg-white rounded-lg shadow-lg p-8">
-      <div className="grid md:grid-cols-[1fr,300px] gap-8">
+      <div className="grid md:grid-cols-[1fr,250px] gap-8">
         {/* Canvas Area */}
         <div className="relative">
           <div className="border-2 border-dashed border-gray-200 rounded-lg overflow-hidden bg-gray-50 hover:border-gray-300 transition-colors">
@@ -128,7 +128,7 @@ export const ImageEditor = () => {
           <div>
             <Label
               htmlFor="image-upload"
-              className="text-lg font-semibold text-gray-700 mb-2"
+              className="text-lg font-semibold text-gray-700 mb-4 flex"
             >
               Upload Image
             </Label>
