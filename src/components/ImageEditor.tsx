@@ -53,8 +53,8 @@ export const ImageEditor = () => {
         
         // Add the image as a regular object (not background)
         fabricCanvas.add(img);
-        // Move image to front using canvas method
-        fabricCanvas.bringToFront(img);
+        // Move image to front using correct canvas method
+        fabricCanvas.bringObjectToFront(img);
         fabricCanvas.renderAll();
         toast.success("Image uploaded successfully!");
       });
@@ -77,8 +77,8 @@ export const ImageEditor = () => {
 
     fabricCanvas.add(text);
     fabricCanvas.setActiveObject(text);
-    // Send text to back using canvas method
-    fabricCanvas.sendToBack(text);
+    // Send text to back using correct canvas method
+    fabricCanvas.sendObjectToBack(text);
     fabricCanvas.renderAll();
     toast.success("Text added! Double click to edit");
   };
