@@ -73,7 +73,7 @@ export const ImageEditor = () => {
         img.evented = false;
 
         fabricCanvas.add(img);
-        fabricCanvas.sendToBack(img);
+        fabricCanvas.sendObjectToBack(img);
         fabricCanvas.renderAll();
         toast.success("Image uploaded successfully!");
       });
@@ -117,7 +117,7 @@ export const ImageEditor = () => {
 
     fabricCanvas.add(text);
     fabricCanvas.setActiveObject(text);
-    fabricCanvas.bringToFront(text);
+    fabricCanvas.bringObjectToFront(text);
     fabricCanvas.renderAll();
     
     setTextLayers((prev) => [...prev, newLayer]);
@@ -163,7 +163,7 @@ export const ImageEditor = () => {
 
     fabricCanvas.add(clonedText);
     fabricCanvas.setActiveObject(clonedText);
-    fabricCanvas.bringToFront(clonedText);
+    fabricCanvas.bringObjectToFront(clonedText);
     fabricCanvas.renderAll();
     
     setTextLayers((prev) => [...prev, newLayer]);
@@ -203,7 +203,7 @@ export const ImageEditor = () => {
       fontFamily,
     });
 
-    fabricCanvas?.bringToFront(layer.text);
+    fabricCanvas?.bringObjectToFront(layer.text);
     fabricCanvas?.renderAll();
   };
 
