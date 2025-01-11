@@ -1,7 +1,13 @@
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface TextControlsProps {
   fontSize: number;
@@ -34,7 +40,7 @@ const fontFamilies = [
   "Helvetica",
   "Verdana",
   "Georgia",
-  "Courier New"
+  "Courier New",
 ];
 
 export const TextControls = ({
@@ -64,7 +70,9 @@ export const TextControls = ({
   return (
     <div className="space-y-4">
       <div>
-        <Label className="text-sm font-medium text-gray-700">Text Content</Label>
+        <Label className="text-sm font-medium text-gray-700">
+          Text Content
+        </Label>
         <Input
           value={textContent}
           onChange={(e) => setTextContent(e.target.value)}
@@ -88,7 +96,21 @@ export const TextControls = ({
           </SelectContent>
         </Select>
       </div>
-
+      <div>
+        <Label
+          htmlFor="text-color"
+          className="text-sm font-medium text-gray-700"
+        >
+          Text Color
+        </Label>
+        <Input
+          id="text-color"
+          type="color"
+          value={textColor}
+          onChange={(e) => setTextColor(e.target.value)}
+          className="h-10 p-1 w-full mt-1 border rounded-md"
+        />
+      </div>
       <div>
         <Label className="text-sm font-medium text-gray-700">Position X</Label>
         <Slider
@@ -162,7 +184,9 @@ export const TextControls = ({
       </div>
 
       <div>
-        <Label className="text-sm font-medium text-gray-700">Horizontal Tilt</Label>
+        <Label className="text-sm font-medium text-gray-700">
+          Horizontal Tilt
+        </Label>
         <Slider
           value={[horizontalTilt]}
           onValueChange={(value) => setHorizontalTilt(value[0])}
@@ -174,7 +198,9 @@ export const TextControls = ({
       </div>
 
       <div>
-        <Label className="text-sm font-medium text-gray-700">Vertical Tilt</Label>
+        <Label className="text-sm font-medium text-gray-700">
+          Vertical Tilt
+        </Label>
         <Slider
           value={[verticalTilt]}
           onValueChange={(value) => setVerticalTilt(value[0])}
@@ -182,19 +208,6 @@ export const TextControls = ({
           min={-45}
           step={1}
           className="my-2"
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="text-color" className="text-sm font-medium text-gray-700">
-          Text Color
-        </Label>
-        <Input
-          id="text-color"
-          type="color"
-          value={textColor}
-          onChange={(e) => setTextColor(e.target.value)}
-          className="h-10 p-1 w-full mt-1 border rounded-md"
         />
       </div>
     </div>

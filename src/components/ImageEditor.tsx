@@ -18,7 +18,7 @@ interface TextLayer {
   x: number;
   y: number;
   fontFamily: string;
-  content: string;
+  content: string; // Required field
 }
 
 export const ImageEditor = () => {
@@ -26,7 +26,7 @@ export const ImageEditor = () => {
   const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
   const [textLayers, setTextLayers] = useState<TextLayer[]>([]);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
-  const [fontSize, setFontSize] = useState(50);
+  const [fontSize, setFontSize] = useState(100);
   const [fontWeight, setFontWeight] = useState(700);
   const [textColor, setTextColor] = useState("#ffffff");
   const [opacity, setOpacity] = useState(1);
@@ -36,7 +36,7 @@ export const ImageEditor = () => {
   const [positionX, setPositionX] = useState(400);
   const [positionY, setPositionY] = useState(300);
   const [fontFamily, setFontFamily] = useState("Arial");
-  const [textContent, setTextContent] = useState("Double click to edit");
+  const [textContent, setTextContent] = useState("Edit");
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -115,14 +115,14 @@ export const ImageEditor = () => {
       x: positionX,
       y: positionY,
       fontFamily,
-      content: textContent,
+      content: textContent, // Add this line
     };
 
     fabricCanvas.add(text);
     fabricCanvas.setActiveObject(text);
     fabricCanvas.bringObjectToFront(text);
     fabricCanvas.renderAll();
-    
+
     setTextLayers((prev) => [...prev, newLayer]);
     setSelectedLayerId(newLayer.id);
     toast.success("Text added!");
@@ -130,7 +130,7 @@ export const ImageEditor = () => {
 
   const duplicateText = () => {
     if (!fabricCanvas || !selectedLayerId) return;
-    
+
     const layer = textLayers.find((l) => l.id === selectedLayerId);
     if (!layer) return;
 
@@ -162,14 +162,14 @@ export const ImageEditor = () => {
       x: layer.x + 20,
       y: layer.y + 20,
       fontFamily: layer.fontFamily,
-      content: layer.content, // Add the missing content property
+      content: layer.content, // Add this line
     };
 
     fabricCanvas.add(clonedText);
     fabricCanvas.setActiveObject(clonedText);
     fabricCanvas.bringObjectToFront(clonedText);
     fabricCanvas.renderAll();
-    
+
     setTextLayers((prev) => [...prev, newLayer]);
     setSelectedLayerId(newLayer.id);
     toast.success("Text duplicated!");
@@ -177,13 +177,13 @@ export const ImageEditor = () => {
 
   const removeText = () => {
     if (!fabricCanvas || !selectedLayerId) return;
-    
+
     const layer = textLayers.find((l) => l.id === selectedLayerId);
     if (!layer) return;
 
     fabricCanvas.remove(layer.text);
     fabricCanvas.renderAll();
-    
+
     setTextLayers((prev) => prev.filter((l) => l.id !== selectedLayerId));
     setSelectedLayerId(null);
     toast.success("Text removed!");
@@ -214,7 +214,19 @@ export const ImageEditor = () => {
 
   useEffect(() => {
     updateSelectedText();
-  }, [fontSize, fontWeight, textColor, opacity, rotation, horizontalTilt, verticalTilt, positionX, positionY, fontFamily, textContent]);
+  }, [
+    fontSize,
+    fontWeight,
+    textColor,
+    opacity,
+    rotation,
+    horizontalTilt,
+    verticalTilt,
+    positionX,
+    positionY,
+    fontFamily,
+    textContent,
+  ]);
 
   const downloadImage = () => {
     if (!fabricCanvas) return;
@@ -236,7 +248,7 @@ export const ImageEditor = () => {
 
   return (
     <Card className="bg-white rounded-lg shadow-lg p-8">
-      <div className="grid md:grid-cols-[1fr,300px] gap-8">
+      <div className="grid md:grid-cols-[1fr,250px] gap-8">
         <div className="relative">
           <div className="border-2 border-dashed border-gray-200 rounded-lg overflow-hidden bg-gray-50 hover:border-gray-300 transition-colors">
             <canvas ref={canvasRef} className="max-w-full" />
@@ -245,7 +257,9 @@ export const ImageEditor = () => {
                 <p className="text-center">
                   Upload an image to get started
                   <br />
-                  <span className="text-sm">Supported formats: PNG, JPG, JPEG</span>
+                  <span className="text-sm">
+                    Supported formats: PNG, JPG, JPEG
+                  </span>
                 </p>
               </div>
             )}
@@ -253,7 +267,7 @@ export const ImageEditor = () => {
         </div>
 
         <div className="space-y-6">
-          <ImageActions 
+          <ImageActions
             onImageUpload={handleImageUpload}
             onDownloadImage={downloadImage}
           />
