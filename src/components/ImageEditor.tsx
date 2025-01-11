@@ -162,6 +162,7 @@ export const ImageEditor = () => {
       x: layer.x + 20,
       y: layer.y + 20,
       fontFamily: layer.fontFamily,
+      content: layer.content, // Add the missing content property
     };
 
     fabricCanvas.add(clonedText);
