@@ -7,6 +7,7 @@ import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import { Upload, Download, Type, Copy, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface TextLayer {
   id: string;
@@ -17,6 +18,9 @@ interface TextLayer {
   rotation: number;
   horizontalTilt: number;
   verticalTilt: number;
+  x: number;
+  y: number;
+  fontFamily: string;
 }
 
 export const ImageEditor = () => {
@@ -24,13 +28,25 @@ export const ImageEditor = () => {
   const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
   const [textLayers, setTextLayers] = useState<TextLayer[]>([]);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
-  const [fontSize, setFontSize] = useState(50); // Default font size changed to 50px
-  const [fontWeight, setFontWeight] = useState(700); // Default font weight set to bold (700)
+  const [fontSize, setFontSize] = useState(50);
+  const [fontWeight, setFontWeight] = useState(700);
   const [textColor, setTextColor] = useState("#ffffff");
   const [opacity, setOpacity] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [horizontalTilt, setHorizontalTilt] = useState(0);
   const [verticalTilt, setVerticalTilt] = useState(0);
+  const [positionX, setPositionX] = useState(400);
+  const [positionY, setPositionY] = useState(300);
+  const [fontFamily, setFontFamily] = useState("Arial");
+
+  const fontFamilies = [
+    "Arial",
+    "Times New Roman",
+    "Helvetica",
+    "Verdana",
+    "Georgia",
+    "Courier New"
+  ];
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -80,18 +96,20 @@ export const ImageEditor = () => {
     if (!fabricCanvas) return;
 
     const text = new IText("Double click to edit", {
-      left: fabricCanvas.width! / 2,
-      top: fabricCanvas.height! / 2,
+      left: positionX,
+      top: positionY,
       fontSize: fontSize,
       fontWeight: fontWeight,
       fill: textColor,
-      fontFamily: "Arial",
+      fontFamily: fontFamily,
       originX: "center",
       originY: "center",
       opacity: opacity,
       angle: rotation,
       skewX: horizontalTilt,
       skewY: verticalTilt,
+      editable: false, // Prevent direct text editing on canvas
+      selectable: true, // Allow selection for movement
     });
 
     const newLayer: TextLayer = {
@@ -103,16 +121,19 @@ export const ImageEditor = () => {
       rotation,
       horizontalTilt,
       verticalTilt,
+      x: positionX,
+      y: positionY,
+      fontFamily,
     };
 
     fabricCanvas.add(text);
     fabricCanvas.setActiveObject(text);
-    fabricCanvas.bringObjectToFront(text); // Always bring text to front
+    fabricCanvas.bringObjectToFront(text);
     fabricCanvas.renderAll();
     
     setTextLayers((prev) => [...prev, newLayer]);
     setSelectedLayerId(newLayer.id);
-    toast.success("Text added! Double click to edit");
+    toast.success("Text added!");
   };
 
   const duplicateText = () => {
@@ -145,6 +166,9 @@ export const ImageEditor = () => {
       rotation: layer.rotation,
       horizontalTilt: layer.horizontalTilt,
       verticalTilt: layer.verticalTilt,
+      x: layer.x + 20,
+      y: layer.y + 20,
+      fontFamily: layer.fontFamily,
     };
 
     fabricCanvas.add(clonedText);
@@ -183,15 +207,18 @@ export const ImageEditor = () => {
       angle: rotation,
       skewX: horizontalTilt,
       skewY: verticalTilt,
+      left: positionX,
+      top: positionY,
+      fontFamily,
     });
 
-    fabricCanvas?.bringObjectToFront(layer.text); // Ensure text stays on top after updates
+    fabricCanvas?.bringObjectToFront(layer.text);
     fabricCanvas?.renderAll();
   };
 
   useEffect(() => {
     updateSelectedText();
-  }, [fontSize, fontWeight, textColor, opacity, rotation, horizontalTilt, verticalTilt]);
+  }, [fontSize, fontWeight, textColor, opacity, rotation, horizontalTilt, verticalTilt, positionX, positionY, fontFamily]);
 
   const downloadImage = () => {
     if (!fabricCanvas) return;
@@ -214,7 +241,6 @@ export const ImageEditor = () => {
   return (
     <Card className="bg-white rounded-lg shadow-lg p-8">
       <div className="grid md:grid-cols-[1fr,300px] gap-8">
-        {/* Canvas Area */}
         <div className="relative">
           <div className="border-2 border-dashed border-gray-200 rounded-lg overflow-hidden bg-gray-50 hover:border-gray-300 transition-colors">
             <canvas ref={canvasRef} className="max-w-full" />
@@ -230,9 +256,7 @@ export const ImageEditor = () => {
           </div>
         </div>
 
-        {/* Controls */}
         <div className="space-y-6">
-          {/* Image Upload */}
           <div>
             <Label htmlFor="image-upload" className="text-lg font-semibold text-gray-700 mb-4 flex">
               Upload Image
@@ -255,7 +279,6 @@ export const ImageEditor = () => {
             </div>
           </div>
 
-          {/* Text Controls */}
           <div className="space-y-4">
             <Button
               onClick={addText}
@@ -284,95 +307,136 @@ export const ImageEditor = () => {
                   </Button>
                 </div>
 
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Font Size</Label>
-                  <Slider
-                    value={[fontSize]}
-                    onValueChange={(value) => setFontSize(value[0])}
-                    max={210}
-                    min={12}
-                    step={1}
-                    className="my-2"
-                  />
-                </div>
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Font Family</Label>
+                    <Select value={fontFamily} onValueChange={setFontFamily}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select font" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {fontFamilies.map((font) => (
+                          <SelectItem key={font} value={font}>
+                            {font}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Font Weight</Label>
-                  <Slider
-                    value={[fontWeight]}
-                    onValueChange={(value) => setFontWeight(value[0])}
-                    max={900}
-                    min={100}
-                    step={100}
-                    className="my-2"
-                  />
-                </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Position X</Label>
+                    <Slider
+                      value={[positionX]}
+                      onValueChange={(value) => setPositionX(value[0])}
+                      max={800}
+                      min={0}
+                      step={1}
+                      className="my-2"
+                    />
+                  </div>
 
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Opacity</Label>
-                  <Slider
-                    value={[opacity]}
-                    onValueChange={(value) => setOpacity(value[0])}
-                    max={1}
-                    min={0}
-                    step={0.1}
-                    className="my-2"
-                  />
-                </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Position Y</Label>
+                    <Slider
+                      value={[positionY]}
+                      onValueChange={(value) => setPositionY(value[0])}
+                      max={600}
+                      min={0}
+                      step={1}
+                      className="my-2"
+                    />
+                  </div>
 
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Rotation</Label>
-                  <Slider
-                    value={[rotation]}
-                    onValueChange={(value) => setRotation(value[0])}
-                    max={360}
-                    min={0}
-                    step={1}
-                    className="my-2"
-                  />
-                </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Font Size</Label>
+                    <Slider
+                      value={[fontSize]}
+                      onValueChange={(value) => setFontSize(value[0])}
+                      max={210}
+                      min={12}
+                      step={1}
+                      className="my-2"
+                    />
+                  </div>
 
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Horizontal Tilt</Label>
-                  <Slider
-                    value={[horizontalTilt]}
-                    onValueChange={(value) => setHorizontalTilt(value[0])}
-                    max={45}
-                    min={-45}
-                    step={1}
-                    className="my-2"
-                  />
-                </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Font Weight</Label>
+                    <Slider
+                      value={[fontWeight]}
+                      onValueChange={(value) => setFontWeight(value[0])}
+                      max={900}
+                      min={100}
+                      step={100}
+                      className="my-2"
+                    />
+                  </div>
 
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Vertical Tilt</Label>
-                  <Slider
-                    value={[verticalTilt]}
-                    onValueChange={(value) => setVerticalTilt(value[0])}
-                    max={45}
-                    min={-45}
-                    step={1}
-                    className="my-2"
-                  />
-                </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Opacity</Label>
+                    <Slider
+                      value={[opacity]}
+                      onValueChange={(value) => setOpacity(value[0])}
+                      max={1}
+                      min={0}
+                      step={0.1}
+                      className="my-2"
+                    />
+                  </div>
 
-                <div>
-                  <Label htmlFor="text-color" className="text-sm font-medium text-gray-700">
-                    Text Color
-                  </Label>
-                  <Input
-                    id="text-color"
-                    type="color"
-                    value={textColor}
-                    onChange={(e) => setTextColor(e.target.value)}
-                    className="h-10 p-1 w-full mt-1 border rounded-md"
-                  />
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Rotation</Label>
+                    <Slider
+                      value={[rotation]}
+                      onValueChange={(value) => setRotation(value[0])}
+                      max={360}
+                      min={0}
+                      step={1}
+                      className="my-2"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Horizontal Tilt</Label>
+                    <Slider
+                      value={[horizontalTilt]}
+                      onValueChange={(value) => setHorizontalTilt(value[0])}
+                      max={45}
+                      min={-45}
+                      step={1}
+                      className="my-2"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Vertical Tilt</Label>
+                    <Slider
+                      value={[verticalTilt]}
+                      onValueChange={(value) => setVerticalTilt(value[0])}
+                      max={45}
+                      min={-45}
+                      step={1}
+                      className="my-2"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="text-color" className="text-sm font-medium text-gray-700">
+                      Text Color
+                    </Label>
+                    <Input
+                      id="text-color"
+                      type="color"
+                      value={textColor}
+                      onChange={(e) => setTextColor(e.target.value)}
+                      className="h-10 p-1 w-full mt-1 border rounded-md"
+                    />
+                  </div>
                 </div>
               </>
             )}
           </div>
 
-          {/* Download */}
           <Button
             onClick={downloadImage}
             className="w-full bg-green-600 hover:bg-green-700 text-white"
