@@ -5,14 +5,33 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
-import { Upload, Download, Type } from "lucide-react";
+import { Upload, Download, Type, Copy, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+interface TextLayer {
+  id: string;
+  text: IText;
+  fontSize: number;
+  fontWeight: number;
+  opacity: number;
+  rotation: number;
+  horizontalTilt: number;
+  verticalTilt: number;
+}
 
 export const ImageEditor = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
+  const [textLayers, setTextLayers] = useState<TextLayer[]>([]);
+  const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const [fontSize, setFontSize] = useState(32);
-  const [textColor, setTextColor] = useState("#000000");
+  const [fontWeight, setFontWeight] = useState(400);
+  const [textColor, setTextColor] = useState("#ffffff");
+  const [opacity, setOpacity] = useState(1);
+  const [rotation, setRotation] = useState(0);
+  const [horizontalTilt, setHorizontalTilt] = useState(0);
+  const [verticalTilt, setVerticalTilt] = useState(0);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -69,19 +88,114 @@ export const ImageEditor = () => {
       left: fabricCanvas.width! / 2,
       top: fabricCanvas.height! / 2,
       fontSize: fontSize,
+      fontWeight: fontWeight,
       fill: textColor,
       fontFamily: "Arial",
       originX: "center",
       originY: "center",
+      opacity: opacity,
+      angle: rotation,
+      skewX: horizontalTilt,
+      skewY: verticalTilt,
     });
+
+    const newLayer: TextLayer = {
+      id: crypto.randomUUID(),
+      text,
+      fontSize,
+      fontWeight,
+      opacity,
+      rotation,
+      horizontalTilt,
+      verticalTilt,
+    };
 
     fabricCanvas.add(text);
     fabricCanvas.setActiveObject(text);
-    // Send text to back using correct canvas method
     fabricCanvas.sendObjectToBack(text);
     fabricCanvas.renderAll();
+    
+    setTextLayers((prev) => [...prev, newLayer]);
+    setSelectedLayerId(newLayer.id);
     toast.success("Text added! Double click to edit");
   };
+
+  const duplicateText = () => {
+    if (!fabricCanvas || !selectedLayerId) return;
+    
+    const layer = textLayers.find((l) => l.id === selectedLayerId);
+    if (!layer) return;
+
+    const clonedText = new IText(layer.text.text!, {
+      left: layer.text.left! + 20,
+      top: layer.text.top! + 20,
+      fontSize: layer.fontSize,
+      fontWeight: layer.fontWeight,
+      fill: layer.text.fill as string,
+      fontFamily: layer.text.fontFamily,
+      originX: "center",
+      originY: "center",
+      opacity: layer.opacity,
+      angle: layer.rotation,
+      skewX: layer.horizontalTilt,
+      skewY: layer.verticalTilt,
+    });
+
+    const newLayer: TextLayer = {
+      id: crypto.randomUUID(),
+      text: clonedText,
+      fontSize: layer.fontSize,
+      fontWeight: layer.fontWeight,
+      opacity: layer.opacity,
+      rotation: layer.rotation,
+      horizontalTilt: layer.horizontalTilt,
+      verticalTilt: layer.verticalTilt,
+    };
+
+    fabricCanvas.add(clonedText);
+    fabricCanvas.setActiveObject(clonedText);
+    fabricCanvas.renderAll();
+    
+    setTextLayers((prev) => [...prev, newLayer]);
+    setSelectedLayerId(newLayer.id);
+    toast.success("Text duplicated!");
+  };
+
+  const removeText = () => {
+    if (!fabricCanvas || !selectedLayerId) return;
+    
+    const layer = textLayers.find((l) => l.id === selectedLayerId);
+    if (!layer) return;
+
+    fabricCanvas.remove(layer.text);
+    fabricCanvas.renderAll();
+    
+    setTextLayers((prev) => prev.filter((l) => l.id !== selectedLayerId));
+    setSelectedLayerId(null);
+    toast.success("Text removed!");
+  };
+
+  const updateSelectedText = () => {
+    if (!selectedLayerId) return;
+    const layer = textLayers.find((l) => l.id === selectedLayerId);
+    if (!layer) return;
+
+    layer.text.set({
+      fontSize,
+      fontWeight,
+      fill: textColor,
+      opacity,
+      angle: rotation,
+      skewX: horizontalTilt,
+      skewY: verticalTilt,
+    });
+
+    fabricCanvas?.renderAll();
+  };
+
+  useEffect(() => {
+    updateSelectedText();
+  }, [fontSize, fontWeight, textColor, opacity, rotation, horizontalTilt, verticalTilt]);
 
   const downloadImage = () => {
     if (!fabricCanvas) return;
@@ -103,7 +217,7 @@ export const ImageEditor = () => {
 
   return (
     <Card className="bg-white rounded-lg shadow-lg p-8">
-      <div className="grid md:grid-cols-[1fr,250px] gap-8">
+      <div className="grid md:grid-cols-[1fr,300px] gap-8">
         {/* Canvas Area */}
         <div className="relative">
           <div className="border-2 border-dashed border-gray-200 rounded-lg overflow-hidden bg-gray-50 hover:border-gray-300 transition-colors">
@@ -113,9 +227,7 @@ export const ImageEditor = () => {
                 <p className="text-center">
                   Upload an image to get started
                   <br />
-                  <span className="text-sm">
-                    Supported formats: PNG, JPG, JPEG
-                  </span>
+                  <span className="text-sm">Supported formats: PNG, JPG, JPEG</span>
                 </p>
               </div>
             )}
@@ -126,10 +238,7 @@ export const ImageEditor = () => {
         <div className="space-y-6">
           {/* Image Upload */}
           <div>
-            <Label
-              htmlFor="image-upload"
-              className="text-lg font-semibold text-gray-700 mb-4 flex"
-            >
+            <Label htmlFor="image-upload" className="text-lg font-semibold text-gray-700 mb-4 flex">
               Upload Image
             </Label>
             <div className="relative">
@@ -160,54 +269,111 @@ export const ImageEditor = () => {
               Add Text
             </Button>
 
-            <div>
-              <Label className="text-sm font-medium text-gray-700">
-                Font Size
-              </Label>
-              <div className="mt-1">
-                <Slider
-                  value={[fontSize]}
-                  onValueChange={(value) => {
-                    setFontSize(value[0]);
-                    const activeObject = fabricCanvas?.getActiveObject();
-                    if (activeObject && "fontSize" in activeObject) {
-                      activeObject.set("fontSize", value[0]);
-                      fabricCanvas?.renderAll();
-                    }
-                  }}
-                  max={72}
-                  min={12}
-                  step={1}
-                  className="my-2"
-                />
-                <div className="text-sm text-gray-500 text-right">
-                  {fontSize}px
+            {selectedLayerId && (
+              <>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={duplicateText}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
+                    Duplicate
+                  </Button>
+                  <Button
+                    onClick={removeText}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Remove
+                  </Button>
                 </div>
-              </div>
-            </div>
 
-            <div>
-              <Label
-                htmlFor="text-color"
-                className="text-sm font-medium text-gray-700"
-              >
-                Text Color
-              </Label>
-              <Input
-                id="text-color"
-                type="color"
-                value={textColor}
-                onChange={(e) => {
-                  setTextColor(e.target.value);
-                  const activeObject = fabricCanvas?.getActiveObject();
-                  if (activeObject && "fill" in activeObject) {
-                    activeObject.set("fill", e.target.value);
-                    fabricCanvas?.renderAll();
-                  }
-                }}
-                className="h-10 p-1 w-full mt-1 border rounded-md"
-              />
-            </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Font Size</Label>
+                  <Slider
+                    value={[fontSize]}
+                    onValueChange={(value) => setFontSize(value[0])}
+                    max={210}
+                    min={12}
+                    step={1}
+                    className="my-2"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Font Weight</Label>
+                  <Slider
+                    value={[fontWeight]}
+                    onValueChange={(value) => setFontWeight(value[0])}
+                    max={900}
+                    min={100}
+                    step={100}
+                    className="my-2"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Opacity</Label>
+                  <Slider
+                    value={[opacity]}
+                    onValueChange={(value) => setOpacity(value[0])}
+                    max={1}
+                    min={0}
+                    step={0.1}
+                    className="my-2"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Rotation</Label>
+                  <Slider
+                    value={[rotation]}
+                    onValueChange={(value) => setRotation(value[0])}
+                    max={360}
+                    min={0}
+                    step={1}
+                    className="my-2"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Horizontal Tilt</Label>
+                  <Slider
+                    value={[horizontalTilt]}
+                    onValueChange={(value) => setHorizontalTilt(value[0])}
+                    max={45}
+                    min={-45}
+                    step={1}
+                    className="my-2"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Vertical Tilt</Label>
+                  <Slider
+                    value={[verticalTilt]}
+                    onValueChange={(value) => setVerticalTilt(value[0])}
+                    max={45}
+                    min={-45}
+                    step={1}
+                    className="my-2"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="text-color" className="text-sm font-medium text-gray-700">
+                    Text Color
+                  </Label>
+                  <Input
+                    id="text-color"
+                    type="color"
+                    value={textColor}
+                    onChange={(e) => setTextColor(e.target.value)}
+                    className="h-10 p-1 w-full mt-1 border rounded-md"
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           {/* Download */}
