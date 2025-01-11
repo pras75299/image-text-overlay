@@ -7,7 +7,6 @@ import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import { Upload, Download, Type, Copy, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface TextLayer {
   id: string;
@@ -25,8 +24,8 @@ export const ImageEditor = () => {
   const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
   const [textLayers, setTextLayers] = useState<TextLayer[]>([]);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
-  const [fontSize, setFontSize] = useState(32);
-  const [fontWeight, setFontWeight] = useState(400);
+  const [fontSize, setFontSize] = useState(50); // Default font size changed to 50px
+  const [fontWeight, setFontWeight] = useState(700); // Default font weight set to bold (700)
   const [textColor, setTextColor] = useState("#ffffff");
   const [opacity, setOpacity] = useState(1);
   const [rotation, setRotation] = useState(0);
@@ -57,7 +56,6 @@ export const ImageEditor = () => {
     reader.onload = (event) => {
       const imgData = event.target?.result as string;
       FabricImage.fromURL(imgData).then((img) => {
-        // Scale image to fit canvas while maintaining aspect ratio
         const scale = Math.min(
           fabricCanvas.width! / img.width!,
           fabricCanvas.height! / img.height!
@@ -65,15 +63,12 @@ export const ImageEditor = () => {
 
         img.scaleX = scale;
         img.scaleY = scale;
-
-        // Center the image
         img.left = (fabricCanvas.width! - img.width! * scale) / 2;
         img.top = (fabricCanvas.height! - img.height! * scale) / 2;
+        img.selectable = false; // Make image not selectable/movable
+        img.evented = false; // Disable all events on the image
 
-        // Add the image as a regular object (not background)
         fabricCanvas.add(img);
-        // Move image to front using correct canvas method
-        fabricCanvas.bringObjectToFront(img);
         fabricCanvas.renderAll();
         toast.success("Image uploaded successfully!");
       });
@@ -112,7 +107,7 @@ export const ImageEditor = () => {
 
     fabricCanvas.add(text);
     fabricCanvas.setActiveObject(text);
-    fabricCanvas.sendObjectToBack(text);
+    fabricCanvas.bringObjectToFront(text); // Always bring text to front
     fabricCanvas.renderAll();
     
     setTextLayers((prev) => [...prev, newLayer]);
@@ -190,6 +185,7 @@ export const ImageEditor = () => {
       skewY: verticalTilt,
     });
 
+    fabricCanvas?.bringObjectToFront(layer.text); // Ensure text stays on top after updates
     fabricCanvas?.renderAll();
   };
 
