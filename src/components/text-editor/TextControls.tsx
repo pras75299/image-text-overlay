@@ -24,6 +24,8 @@ interface TextControlsProps {
   setPositionY: (value: number) => void;
   fontFamily: string;
   setFontFamily: (value: string) => void;
+  textContent: string;
+  setTextContent: (value: string) => void;
 }
 
 const fontFamilies = [
@@ -56,9 +58,21 @@ export const TextControls = ({
   setPositionY,
   fontFamily,
   setFontFamily,
+  textContent,
+  setTextContent,
 }: TextControlsProps) => {
   return (
     <div className="space-y-4">
+      <div>
+        <Label className="text-sm font-medium text-gray-700">Text Content</Label>
+        <Input
+          value={textContent}
+          onChange={(e) => setTextContent(e.target.value)}
+          className="mt-1"
+          placeholder="Enter text"
+        />
+      </div>
+
       <div>
         <Label className="text-sm font-medium text-gray-700">Font Family</Label>
         <Select value={fontFamily} onValueChange={setFontFamily}>

@@ -18,6 +18,7 @@ interface TextLayer {
   x: number;
   y: number;
   fontFamily: string;
+  content: string;
 }
 
 export const ImageEditor = () => {
@@ -35,6 +36,7 @@ export const ImageEditor = () => {
   const [positionX, setPositionX] = useState(400);
   const [positionY, setPositionY] = useState(300);
   const [fontFamily, setFontFamily] = useState("Arial");
+  const [textContent, setTextContent] = useState("Double click to edit");
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -84,7 +86,7 @@ export const ImageEditor = () => {
   const addText = () => {
     if (!fabricCanvas) return;
 
-    const text = new IText("Double click to edit", {
+    const text = new IText(textContent, {
       left: positionX,
       top: positionY,
       fontSize: fontSize,
@@ -113,6 +115,7 @@ export const ImageEditor = () => {
       x: positionX,
       y: positionY,
       fontFamily,
+      content: textContent,
     };
 
     fabricCanvas.add(text);
@@ -191,6 +194,7 @@ export const ImageEditor = () => {
     if (!layer) return;
 
     layer.text.set({
+      text: textContent,
       fontSize,
       fontWeight,
       fill: textColor,
@@ -209,7 +213,7 @@ export const ImageEditor = () => {
 
   useEffect(() => {
     updateSelectedText();
-  }, [fontSize, fontWeight, textColor, opacity, rotation, horizontalTilt, verticalTilt, positionX, positionY, fontFamily]);
+  }, [fontSize, fontWeight, textColor, opacity, rotation, horizontalTilt, verticalTilt, positionX, positionY, fontFamily, textContent]);
 
   const downloadImage = () => {
     if (!fabricCanvas) return;
@@ -282,6 +286,8 @@ export const ImageEditor = () => {
               setPositionY={setPositionY}
               fontFamily={fontFamily}
               setFontFamily={setFontFamily}
+              textContent={textContent}
+              setTextContent={setTextContent}
             />
           )}
         </div>
