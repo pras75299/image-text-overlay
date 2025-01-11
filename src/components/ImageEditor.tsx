@@ -1,13 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Canvas as FabricCanvas, Image as FabricImage, IText } from "fabric";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
-import { toast } from "sonner";
-import { Upload, Download, Type, Copy, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { TextControls } from "./text-editor/TextControls";
+import { TextActions } from "./text-editor/TextActions";
+import { ImageActions } from "./text-editor/ImageActions";
 
 interface TextLayer {
   id: string;
@@ -38,15 +35,6 @@ export const ImageEditor = () => {
   const [positionX, setPositionX] = useState(400);
   const [positionY, setPositionY] = useState(300);
   const [fontFamily, setFontFamily] = useState("Arial");
-
-  const fontFamilies = [
-    "Arial",
-    "Times New Roman",
-    "Helvetica",
-    "Verdana",
-    "Georgia",
-    "Courier New"
-  ];
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -81,10 +69,11 @@ export const ImageEditor = () => {
         img.scaleY = scale;
         img.left = (fabricCanvas.width! - img.width! * scale) / 2;
         img.top = (fabricCanvas.height! - img.height! * scale) / 2;
-        img.selectable = false; // Make image not selectable/movable
-        img.evented = false; // Disable all events on the image
+        img.selectable = false;
+        img.evented = false;
 
         fabricCanvas.add(img);
+        fabricCanvas.sendToBack(img);
         fabricCanvas.renderAll();
         toast.success("Image uploaded successfully!");
       });
@@ -108,8 +97,8 @@ export const ImageEditor = () => {
       angle: rotation,
       skewX: horizontalTilt,
       skewY: verticalTilt,
-      editable: false, // Prevent direct text editing on canvas
-      selectable: true, // Allow selection for movement
+      editable: false,
+      selectable: true,
     });
 
     const newLayer: TextLayer = {
@@ -128,7 +117,7 @@ export const ImageEditor = () => {
 
     fabricCanvas.add(text);
     fabricCanvas.setActiveObject(text);
-    fabricCanvas.bringObjectToFront(text);
+    fabricCanvas.bringToFront(text);
     fabricCanvas.renderAll();
     
     setTextLayers((prev) => [...prev, newLayer]);
@@ -155,6 +144,7 @@ export const ImageEditor = () => {
       angle: layer.rotation,
       skewX: layer.horizontalTilt,
       skewY: layer.verticalTilt,
+      editable: false,
     });
 
     const newLayer: TextLayer = {
@@ -173,6 +163,7 @@ export const ImageEditor = () => {
 
     fabricCanvas.add(clonedText);
     fabricCanvas.setActiveObject(clonedText);
+    fabricCanvas.bringToFront(clonedText);
     fabricCanvas.renderAll();
     
     setTextLayers((prev) => [...prev, newLayer]);
@@ -212,7 +203,7 @@ export const ImageEditor = () => {
       fontFamily,
     });
 
-    fabricCanvas?.bringObjectToFront(layer.text);
+    fabricCanvas?.bringToFront(layer.text);
     fabricCanvas?.renderAll();
   };
 
@@ -257,193 +248,42 @@ export const ImageEditor = () => {
         </div>
 
         <div className="space-y-6">
-          <div>
-            <Label htmlFor="image-upload" className="text-lg font-semibold text-gray-700 mb-4 flex">
-              Upload Image
-            </Label>
-            <div className="relative">
-              <Input
-                id="image-upload"
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleImageUpload}
-              />
-              <Button
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={() => document.getElementById("image-upload")?.click()}
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Choose Image
-              </Button>
-            </div>
-          </div>
+          <ImageActions 
+            onImageUpload={handleImageUpload}
+            onDownloadImage={downloadImage}
+          />
 
-          <div className="space-y-4">
-            <Button
-              onClick={addText}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-            >
-              <Type className="mr-2 h-4 w-4" />
-              Add Text
-            </Button>
+          <TextActions
+            selectedLayerId={selectedLayerId}
+            onAddText={addText}
+            onDuplicateText={duplicateText}
+            onRemoveText={removeText}
+          />
 
-            {selectedLayerId && (
-              <>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={duplicateText}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    <Copy className="mr-2 h-4 w-4" />
-                    Duplicate
-                  </Button>
-                  <Button
-                    onClick={removeText}
-                    className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Remove
-                  </Button>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Font Family</Label>
-                    <Select value={fontFamily} onValueChange={setFontFamily}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select font" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {fontFamilies.map((font) => (
-                          <SelectItem key={font} value={font}>
-                            {font}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Position X</Label>
-                    <Slider
-                      value={[positionX]}
-                      onValueChange={(value) => setPositionX(value[0])}
-                      max={800}
-                      min={0}
-                      step={1}
-                      className="my-2"
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Position Y</Label>
-                    <Slider
-                      value={[positionY]}
-                      onValueChange={(value) => setPositionY(value[0])}
-                      max={600}
-                      min={0}
-                      step={1}
-                      className="my-2"
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Font Size</Label>
-                    <Slider
-                      value={[fontSize]}
-                      onValueChange={(value) => setFontSize(value[0])}
-                      max={210}
-                      min={12}
-                      step={1}
-                      className="my-2"
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Font Weight</Label>
-                    <Slider
-                      value={[fontWeight]}
-                      onValueChange={(value) => setFontWeight(value[0])}
-                      max={900}
-                      min={100}
-                      step={100}
-                      className="my-2"
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Opacity</Label>
-                    <Slider
-                      value={[opacity]}
-                      onValueChange={(value) => setOpacity(value[0])}
-                      max={1}
-                      min={0}
-                      step={0.1}
-                      className="my-2"
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Rotation</Label>
-                    <Slider
-                      value={[rotation]}
-                      onValueChange={(value) => setRotation(value[0])}
-                      max={360}
-                      min={0}
-                      step={1}
-                      className="my-2"
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Horizontal Tilt</Label>
-                    <Slider
-                      value={[horizontalTilt]}
-                      onValueChange={(value) => setHorizontalTilt(value[0])}
-                      max={45}
-                      min={-45}
-                      step={1}
-                      className="my-2"
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Vertical Tilt</Label>
-                    <Slider
-                      value={[verticalTilt]}
-                      onValueChange={(value) => setVerticalTilt(value[0])}
-                      max={45}
-                      min={-45}
-                      step={1}
-                      className="my-2"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="text-color" className="text-sm font-medium text-gray-700">
-                      Text Color
-                    </Label>
-                    <Input
-                      id="text-color"
-                      type="color"
-                      value={textColor}
-                      onChange={(e) => setTextColor(e.target.value)}
-                      className="h-10 p-1 w-full mt-1 border rounded-md"
-                    />
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-
-          <Button
-            onClick={downloadImage}
-            className="w-full bg-green-600 hover:bg-green-700 text-white"
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Download Image
-          </Button>
+          {selectedLayerId && (
+            <TextControls
+              fontSize={fontSize}
+              setFontSize={setFontSize}
+              fontWeight={fontWeight}
+              setFontWeight={setFontWeight}
+              textColor={textColor}
+              setTextColor={setTextColor}
+              opacity={opacity}
+              setOpacity={setOpacity}
+              rotation={rotation}
+              setRotation={setRotation}
+              horizontalTilt={horizontalTilt}
+              setHorizontalTilt={setHorizontalTilt}
+              verticalTilt={verticalTilt}
+              setVerticalTilt={setVerticalTilt}
+              positionX={positionX}
+              setPositionX={setPositionX}
+              positionY={positionY}
+              setPositionY={setPositionY}
+              fontFamily={fontFamily}
+              setFontFamily={setFontFamily}
+            />
+          )}
         </div>
       </div>
     </Card>
