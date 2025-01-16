@@ -116,8 +116,9 @@ export const TextControls = ({
         <Slider
           value={[positionX]}
           onValueChange={(value) => setPositionX(value[0])}
-          max={800}
-          min={0}
+          // Adjust max value considering text width
+          max={700} // Reduced from 800 to keep text visible
+          min={100} // Increased from 0 to keep text visible
           step={1}
           className="my-2"
         />
@@ -128,8 +129,9 @@ export const TextControls = ({
         <Slider
           value={[positionY]}
           onValueChange={(value) => setPositionY(value[0])}
-          max={600}
-          min={0}
+          // Adjust max value considering text height
+          max={500} // Reduced from 600 to keep text visible
+          min={100} // Increased from 0 to keep text visible
           step={1}
           className="my-2"
         />
