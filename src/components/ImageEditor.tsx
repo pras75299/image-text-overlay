@@ -37,6 +37,7 @@ export const ImageEditor = () => {
   const [positionY, setPositionY] = useState(300);
   const [fontFamily, setFontFamily] = useState("Arial");
   const [textContent, setTextContent] = useState("Edit");
+  const [hasImage, setHasImage] = useState(false);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -58,6 +59,13 @@ export const ImageEditor = () => {
     const file = e.target.files?.[0];
     if (!file || !fabricCanvas) return;
 
+    // Clear existing image if any
+    fabricCanvas.getObjects().forEach((obj) => {
+      if (obj instanceof FabricImage) {
+        fabricCanvas.remove(obj);
+      }
+    });
+
     const reader = new FileReader();
     reader.onload = (event) => {
       const imgData = event.target?.result as string;
@@ -77,6 +85,7 @@ export const ImageEditor = () => {
         fabricCanvas.add(img);
         fabricCanvas.sendObjectToBack(img);
         fabricCanvas.renderAll();
+        setHasImage(true);
         toast.success("Image uploaded successfully!");
       });
     };
@@ -99,8 +108,14 @@ export const ImageEditor = () => {
       angle: rotation,
       skewX: horizontalTilt,
       skewY: verticalTilt,
+      hasControls: false,
+      lockScalingX: true,
+      lockScalingY: true,
+      lockUniScaling: true,
       editable: false,
-      selectable: true,
+      selectable: false,
+      lockMovementX: true,
+      lockMovementY: true,
     });
 
     const newLayer: TextLayer = {
@@ -147,7 +162,14 @@ export const ImageEditor = () => {
       angle: layer.rotation,
       skewX: layer.horizontalTilt,
       skewY: layer.verticalTilt,
+      hasControls: false,
+      lockScalingX: true,
+      lockScalingY: true,
+      lockUniScaling: true,
       editable: false,
+      selectable: false,
+      lockMovementX: true,
+      lockMovementY: true,
     });
 
     const newLayer: TextLayer = {
@@ -194,6 +216,20 @@ export const ImageEditor = () => {
     const layer = textLayers.find((l) => l.id === selectedLayerId);
     if (!layer) return;
 
+    // Get text boundaries
+    const textWidth = layer.text.getScaledWidth();
+    const textHeight = layer.text.getScaledHeight();
+
+    // Constrain position within canvas
+    const constrainedX = Math.min(
+      Math.max(positionX, textWidth / 2),
+      fabricCanvas!.width! - textWidth / 2
+    );
+    const constrainedY = Math.min(
+      Math.max(positionY, textHeight / 2),
+      fabricCanvas!.height! - textHeight / 2
+    );
+
     layer.text.set({
       text: textContent,
       fontSize,
@@ -203,8 +239,8 @@ export const ImageEditor = () => {
       angle: rotation,
       skewX: horizontalTilt,
       skewY: verticalTilt,
-      left: positionX,
-      top: positionY,
+      left: constrainedX,
+      top: constrainedY,
       fontFamily,
     });
 
