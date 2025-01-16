@@ -2,8 +2,6 @@
 
 ## Project info
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/68cb8ecc-009e-441e-98f3-2da53e187dcf) and start prompting.
-
 Changes made via Lovable will be committed automatically to this repo.
 
 **Use your preferred IDE**
@@ -51,11 +49,3 @@ This project is built with .
 - React
 - shadcn-ui
 - Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/68cb8ecc-009e-441e-98f3-2da53e187dcf) and click on Share -> Publish.
-
-## I want to use a custom domain - is that possible?
-
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
