@@ -12,14 +12,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Upload, Download, Loader2, Plus, Trash2, Copy } from "lucide-react";
+import {
+  Upload,
+  Download,
+  Loader2,
+  Plus,
+  Trash2,
+  Copy,
+  Undo2,
+  Redo2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { segmentImage } from "@/lib/backgroundRemoval";
 import { cn } from "@/lib/utils";
 import type { TextLayer } from "@/types/textLayer";
-import {
-  createDefaultTextLayer,
-} from "@/types/textLayer";
+import { createDefaultTextLayer } from "@/types/textLayer";
+import { useHistory } from "@/hooks/useHistory";
 
 const FONT_FAMILIES = [
   "Arial",
@@ -48,7 +56,16 @@ export const TextBehindEditor = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const [textLayers, setTextLayers] = useState<TextLayer[]>([]);
+  const {
+    present: textLayers,
+    push: historyPush,
+    setPresentWithoutPush,
+    reset: historyReset,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  } = useHistory<TextLayer[]>([]);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const [previewTextOnTop, setPreviewTextOnTop] = useState(true);
   const dragRef = useRef<{
@@ -56,6 +73,7 @@ export const TextBehindEditor = () => {
     startY: number;
     startPos: { x: number; y: number };
   } | null>(null);
+  const lastDragLayersRef = useRef<TextLayer[]>([]);
 
   const selectedLayer = textLayers.find((l) => l.id === selectedLayerId);
 
@@ -77,7 +95,7 @@ export const TextBehindEditor = () => {
         return null;
       });
       setImageDimensions(null);
-      setTextLayers([]);
+      historyReset([]);
       setSelectedLayerId(null);
 
       const reader = new FileReader();
@@ -137,18 +155,20 @@ export const TextBehindEditor = () => {
 
   const handleAddLayer = useCallback(() => {
     const newLayer = createDefaultTextLayer();
-    setTextLayers((prev) => [...prev, newLayer]);
+    const newLayers = [...textLayers, newLayer];
+    historyPush(newLayers);
     setSelectedLayerId(newLayer.id);
     toast.success("Text layer added!");
-  }, []);
+  }, [textLayers, historyPush]);
 
   const handleRemoveLayer = useCallback(
     (id: string) => {
-      setTextLayers((prev) => prev.filter((l) => l.id !== id));
+      const newLayers = textLayers.filter((l) => l.id !== id);
+      historyPush(newLayers);
       setSelectedLayerId((curr) => (curr === id ? null : curr));
       toast.success("Layer removed!");
     },
-    [],
+    [textLayers, historyPush],
   );
 
   const handleDuplicateLayer = useCallback(
@@ -163,20 +183,27 @@ export const TextBehindEditor = () => {
           y: Math.min(1, layer.position.y + 0.05),
         },
       };
-      setTextLayers((prev) => [...prev, newLayer]);
+      const newLayers = [...textLayers, newLayer];
+      historyPush(newLayers);
       setSelectedLayerId(newLayer.id);
       toast.success("Layer duplicated!");
     },
-    [textLayers],
+    [textLayers, historyPush],
   );
 
   const handleUpdateLayer = useCallback(
-    (id: string, updates: Partial<TextLayer>) => {
-      setTextLayers((prev) =>
-        prev.map((l) => (l.id === id ? { ...l, ...updates } : l)),
+    (id: string, updates: Partial<TextLayer>, options?: { isDrag?: boolean }) => {
+      const newLayers = textLayers.map((l) =>
+        l.id === id ? { ...l, ...updates } : l,
       );
+      if (options?.isDrag) {
+        lastDragLayersRef.current = newLayers;
+        setPresentWithoutPush(newLayers);
+      } else {
+        historyPush(newLayers);
+      }
     },
-    [],
+    [textLayers, setPresentWithoutPush, historyPush],
   );
 
   const handleDownload = useCallback(() => {
@@ -305,12 +332,17 @@ export const TextBehindEditor = () => {
       const deltaY = (e.clientY - dragRef.current.startY) / rect.height;
       const newX = Math.max(0, Math.min(1, dragRef.current.startPos.x + deltaX));
       const newY = Math.max(0, Math.min(1, dragRef.current.startPos.y + deltaY));
-      handleUpdateLayer(selectedLayerId, {
-        position: { x: newX, y: newY },
-      });
+      handleUpdateLayer(
+        selectedLayerId,
+        { position: { x: newX, y: newY } },
+        { isDrag: true },
+      );
     };
 
     const handleMouseUp = () => {
+      if (dragRef.current && lastDragLayersRef.current.length > 0) {
+        historyPush(lastDragLayersRef.current);
+      }
       dragRef.current = null;
     };
 
@@ -325,12 +357,17 @@ export const TextBehindEditor = () => {
       const deltaY = (touch.clientY - dragRef.current.startY) / rect.height;
       const newX = Math.max(0, Math.min(1, dragRef.current.startPos.x + deltaX));
       const newY = Math.max(0, Math.min(1, dragRef.current.startPos.y + deltaY));
-      handleUpdateLayer(selectedLayerId, {
-        position: { x: newX, y: newY },
-      });
+      handleUpdateLayer(
+        selectedLayerId,
+        { position: { x: newX, y: newY } },
+        { isDrag: true },
+      );
     };
 
     const handleTouchEnd = () => {
+      if (dragRef.current && lastDragLayersRef.current.length > 0) {
+        historyPush(lastDragLayersRef.current);
+      }
       dragRef.current = null;
     };
 
@@ -344,7 +381,39 @@ export const TextBehindEditor = () => {
       window.removeEventListener("touchmove", handleTouchMove);
       window.removeEventListener("touchend", handleTouchEnd);
     };
-  }, [selectedLayerId, handleUpdateLayer]);
+  }, [selectedLayerId, handleUpdateLayer, historyPush]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === "z") {
+        e.preventDefault();
+        if (e.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [undo, redo]);
+
+  useEffect(() => {
+    if (
+      selectedLayerId &&
+      !textLayers.some((l) => l.id === selectedLayerId)
+    ) {
+      setSelectedLayerId(null);
+    }
+  }, [textLayers, selectedLayerId]);
 
   return (
     <Card className="bg-white rounded-lg shadow-lg p-8">
@@ -497,19 +566,43 @@ export const TextBehindEditor = () => {
           {isProcessed && (
             <>
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-lg font-semibold text-gray-700">
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="text-lg font-semibold text-gray-700 shrink-0">
                     Text Layers
                   </Label>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={handleAddLayer}
-                    className="bg-purple-600 hover:bg-purple-700"
-                  >
-                    <Plus className="mr-1 h-4 w-4" />
-                    Add
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      onClick={undo}
+                      disabled={!canUndo}
+                      aria-label="Undo"
+                    >
+                      <Undo2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      onClick={redo}
+                      disabled={!canRedo}
+                      aria-label="Redo"
+                    >
+                      <Redo2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleAddLayer}
+                      className="bg-purple-600 hover:bg-purple-700 shrink-0"
+                    >
+                      <Plus className="mr-1 h-4 w-4" />
+                      Add
+                    </Button>
+                  </div>
                 </div>
                 {textLayers.length === 0 ? (
                   <p className="text-sm text-gray-500 py-2">

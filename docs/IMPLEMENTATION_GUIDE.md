@@ -11,7 +11,7 @@ This guide documents the implementation of new features for the Overlayly (Text 
 ## Phase 1: Core Features (High Impact)
 
 ### Feature 1: Multiple Text Layers
-**Status:** In Progress | **Priority:** P0
+**Status:** Done | **Priority:** P0
 
 **Description:** Support multiple text blocks per image with individual positioning, styling, and layer ordering.
 
@@ -38,7 +38,7 @@ This guide documents the implementation of new features for the Overlayly (Text 
 ---
 
 ### Feature 2: Undo/Redo
-**Status:** Pending | **Priority:** P0
+**Status:** Done | **Priority:** P0
 
 **Description:** History stack for text changes; keyboard shortcuts (Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z).
 
