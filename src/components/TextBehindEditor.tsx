@@ -77,6 +77,18 @@ export const TextBehindEditor = () => {
   const [previewTextOnTop, setPreviewTextOnTop] = useState(true);
   const [exportFormat, setExportFormat] = useState<"png" | "jpeg" | "webp">("png");
   const [exportQuality, setExportQuality] = useState(0.92);
+  const [backgroundMode, setBackgroundMode] = useState<
+    "original" | "solid" | "gradient" | "blur"
+  >("original");
+  const [backgroundSolidColor, setBackgroundSolidColor] =
+    useState("#f8f9fa");
+  const [backgroundGradientColor1, setBackgroundGradientColor1] =
+    useState("#6366f1");
+  const [backgroundGradientColor2, setBackgroundGradientColor2] =
+    useState("#8b5cf6");
+  const [backgroundGradientDirection, setBackgroundGradientDirection] =
+    useState<"top-bottom" | "left-right" | "diagonal">("top-bottom");
+  const [backgroundBlurAmount, setBackgroundBlurAmount] = useState(12);
   const dragRef = useRef<{
     startX: number;
     startY: number;
@@ -245,7 +257,29 @@ export const TextBehindEditor = () => {
         ctx.fillRect(0, 0, width, height);
       }
 
-      ctx.drawImage(bgImg, 0, 0);
+      if (backgroundMode === "solid") {
+        ctx.fillStyle = backgroundSolidColor;
+        ctx.fillRect(0, 0, width, height);
+      } else if (backgroundMode === "gradient") {
+        const [x0, y0, x1, y1] =
+          backgroundGradientDirection === "top-bottom"
+            ? [0, 0, 0, height]
+            : backgroundGradientDirection === "left-right"
+              ? [0, 0, width, 0]
+              : [0, 0, width, height];
+        const gradient = ctx.createLinearGradient(x0, y0, x1, y1);
+        gradient.addColorStop(0, backgroundGradientColor1);
+        gradient.addColorStop(1, backgroundGradientColor2);
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+      } else if (backgroundMode === "blur") {
+        ctx.save();
+        ctx.filter = `blur(${backgroundBlurAmount}px)`;
+        ctx.drawImage(bgImg, 0, 0);
+        ctx.restore();
+      } else {
+        ctx.drawImage(bgImg, 0, 0);
+      }
 
       textLayers.forEach((layer) => {
         ctx.save();
@@ -334,6 +368,12 @@ export const TextBehindEditor = () => {
     textLayers,
     exportFormat,
     exportQuality,
+    backgroundMode,
+    backgroundSolidColor,
+    backgroundGradientColor1,
+    backgroundGradientColor2,
+    backgroundGradientDirection,
+    backgroundBlurAmount,
   ]);
 
   const showPreview = !!imagePreview;
@@ -499,10 +539,49 @@ export const TextBehindEditor = () => {
                     >
                       {isProcessed ? (
                         <>
+                          {backgroundMode === "solid" && (
+                            <div
+                              className="absolute inset-0"
+                              style={{ backgroundColor: backgroundSolidColor }}
+                              aria-hidden="true"
+                            />
+                          )}
+                          {backgroundMode === "gradient" && (
+                            <div
+                              className="absolute inset-0"
+                              style={{
+                                background: `linear-gradient(${
+                                  backgroundGradientDirection === "top-bottom"
+                                    ? "180deg"
+                                    : backgroundGradientDirection === "left-right"
+                                      ? "90deg"
+                                      : "135deg"
+                                }, ${backgroundGradientColor1}, ${backgroundGradientColor2})`,
+                              }}
+                              aria-hidden="true"
+                            />
+                          )}
+                          {(backgroundMode === "original" ||
+                            backgroundMode === "blur") && (
+                            <img
+                              src={backgroundImageUrl}
+                              alt="Background"
+                              className={cn(
+                                "max-w-full max-h-full w-auto h-auto object-contain absolute",
+                                backgroundMode === "blur" && "scale-105",
+                              )}
+                              style={
+                                backgroundMode === "blur"
+                                  ? {
+                                      filter: `blur(${Math.min(backgroundBlurAmount, 24)}px)`,
+                                    }
+                                  : undefined
+                              }
+                            />
+                          )}
                           <img
-                            src={backgroundImageUrl}
-                            alt="Background"
-                            className="max-w-full max-h-full w-auto h-auto object-contain"
+                            src={foregroundImageUrl}
+                            alt="Subject"
                             onLoad={(e) => {
                               const img = e.currentTarget;
                               setImageDimensions({
@@ -510,10 +589,6 @@ export const TextBehindEditor = () => {
                                 height: img.naturalHeight,
                               });
                             }}
-                          />
-                          <img
-                            src={foregroundImageUrl}
-                            alt="Subject"
                             className={cn(
                               "max-w-full max-h-full w-auto h-auto object-contain absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
                               previewTextOnTop ? "opacity-60" : "z-10",
@@ -833,6 +908,120 @@ export const TextBehindEditor = () => {
                   </div>
                 </div>
               )}
+
+              <div className="space-y-3 border-t pt-4">
+                <Label className="text-sm font-semibold text-gray-700 block">
+                  Background
+                </Label>
+                <div>
+                  <Label className="text-xs font-medium text-gray-600 block mb-1">
+                    Mode
+                  </Label>
+                  <Select
+                    value={backgroundMode}
+                    onValueChange={(v: "original" | "solid" | "gradient" | "blur") =>
+                      setBackgroundMode(v)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="original">
+                        Original
+                      </SelectItem>
+                      <SelectItem value="solid">Solid color</SelectItem>
+                      <SelectItem value="gradient">Gradient</SelectItem>
+                      <SelectItem value="blur">Blur</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {backgroundMode === "solid" && (
+                  <div>
+                    <Label className="text-xs font-medium text-gray-600 block mb-1">
+                      Color
+                    </Label>
+                    <Input
+                      type="color"
+                      value={backgroundSolidColor}
+                      onChange={(e) =>
+                        setBackgroundSolidColor(e.target.value)
+                      }
+                      className="h-10 p-1 w-full border rounded-md cursor-pointer"
+                    />
+                  </div>
+                )}
+                {backgroundMode === "gradient" && (
+                  <>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-600 block mb-1">
+                        Color 1
+                      </Label>
+                      <Input
+                        type="color"
+                        value={backgroundGradientColor1}
+                        onChange={(e) =>
+                          setBackgroundGradientColor1(e.target.value)
+                        }
+                        className="h-10 p-1 w-full border rounded-md cursor-pointer"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-600 block mb-1">
+                        Color 2
+                      </Label>
+                      <Input
+                        type="color"
+                        value={backgroundGradientColor2}
+                        onChange={(e) =>
+                          setBackgroundGradientColor2(e.target.value)
+                        }
+                        className="h-10 p-1 w-full border rounded-md cursor-pointer"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-600 block mb-1">
+                        Direction
+                      </Label>
+                      <Select
+                        value={backgroundGradientDirection}
+                        onValueChange={(v: "top-bottom" | "left-right" | "diagonal") =>
+                          setBackgroundGradientDirection(v)
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="top-bottom">
+                            Top to bottom
+                          </SelectItem>
+                          <SelectItem value="left-right">
+                            Left to right
+                          </SelectItem>
+                          <SelectItem value="diagonal">
+                            Diagonal
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
+                {backgroundMode === "blur" && (
+                  <div>
+                    <Label className="text-xs font-medium text-gray-600 block mb-1">
+                      Blur amount: {backgroundBlurAmount}px
+                    </Label>
+                    <Slider
+                      value={[backgroundBlurAmount]}
+                      onValueChange={(v) => setBackgroundBlurAmount(v[0])}
+                      min={2}
+                      max={40}
+                      step={2}
+                    />
+                  </div>
+                )}
+              </div>
 
               {isProcessed && (
                 <>
