@@ -31,9 +31,16 @@ const FONT_FAMILIES = [
 export const TextBehindEditor = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(null);
-  const [foregroundImageUrl, setForegroundImageUrl] = useState<string | null>(null);
-  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(
+    null,
+  );
+  const [foregroundImageUrl, setForegroundImageUrl] = useState<string | null>(
+    null,
+  );
+  const [imageDimensions, setImageDimensions] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -46,7 +53,11 @@ export const TextBehindEditor = () => {
   const [textRotation, setTextRotation] = useState(0);
   const [textPosition, setTextPosition] = useState({ x: 0.5, y: 0.5 });
   const [previewTextOnTop, setPreviewTextOnTop] = useState(true);
-  const dragRef = useRef<{ startX: number; startY: number; startPos: { x: number; y: number } } | null>(null);
+  const dragRef = useRef<{
+    startX: number;
+    startY: number;
+    startPos: { x: number; y: number };
+  } | null>(null);
 
   const handleImageUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -74,7 +85,7 @@ export const TextBehindEditor = () => {
       };
       reader.readAsDataURL(file);
     },
-    []
+    [],
   );
 
   useEffect(() => {
@@ -104,7 +115,8 @@ export const TextBehindEditor = () => {
         toast.success("Ready! Drag the text to position it.");
       } catch (err) {
         if (!cancelled) {
-          const msg = err instanceof Error ? err.message : "Failed to process image";
+          const msg =
+            err instanceof Error ? err.message : "Failed to process image";
           toast.error(msg);
           setBackgroundImageUrl(null);
           setForegroundImageUrl(null);
@@ -133,12 +145,16 @@ export const TextBehindEditor = () => {
 
     const bgImg = new Image();
     const fgImg = new Image();
-    bgImg.crossOrigin = "anonymous";
-    fgImg.crossOrigin = "anonymous";
 
     const draw = () => {
-      const width = bgImg.naturalWidth;
-      const height = bgImg.naturalHeight;
+      const width = bgImg.naturalWidth || 1;
+      const height = bgImg.naturalHeight || 1;
+
+      if (width <= 0 || height <= 0) {
+        toast.error("Invalid image dimensions");
+        return;
+      }
+
       canvas.width = width;
       canvas.height = height;
 
@@ -147,7 +163,7 @@ export const TextBehindEditor = () => {
       ctx.save();
       ctx.globalAlpha = textOpacity;
       ctx.fillStyle = textColor;
-      ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+      ctx.font = `normal ${fontWeight} ${fontSize}px ${fontFamily}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       const textX = textPosition.x * width;
@@ -155,34 +171,37 @@ export const TextBehindEditor = () => {
       ctx.translate(textX, textY);
       ctx.rotate((textRotation * Math.PI) / 180);
       ctx.translate(-textX, -textY);
-      ctx.fillText(textContent || "TEXT", textX, textY, width - 40);
+      ctx.fillText(textContent || "TEXT", textX, textY, Math.max(20, width - 40));
       ctx.restore();
 
       ctx.drawImage(fgImg, 0, 0);
 
-      const link = document.createElement("a");
-      link.download = "text-behind-object.png";
-      link.href = canvas.toDataURL("image/png");
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast.success("Image downloaded!");
+      try {
+        const dataUrl = canvas.toDataURL("image/png");
+        const link = document.createElement("a");
+        link.download = "text-behind-object.png";
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success("Image downloaded!");
+      } catch (err) {
+        console.error("Download failed:", err);
+        toast.error("Failed to generate image");
+      }
     };
 
-    const loaded =
-      bgImg.complete && fgImg.complete
-        ? draw
-        : () => {
-            bgImg.onload = fgImg.onload = draw;
-          };
-    if (bgImg.complete && fgImg.complete) {
-      draw();
-    } else {
-      bgImg.onload = () => fgImg.complete && draw();
-      fgImg.onload = () => bgImg.complete && draw();
-    }
+    const tryDraw = () => {
+      if (bgImg.complete && fgImg.complete && bgImg.naturalWidth > 0 && bgImg.naturalHeight > 0) {
+        draw();
+      }
+    };
+
+    bgImg.onload = tryDraw;
+    fgImg.onload = tryDraw;
     bgImg.onerror = () => toast.error("Failed to load background");
     fgImg.onerror = () => toast.error("Failed to load foreground");
+
     bgImg.src = backgroundImageUrl;
     fgImg.src = foregroundImageUrl;
   }, [
@@ -212,7 +231,7 @@ export const TextBehindEditor = () => {
         startPos: { ...textPosition },
       };
     },
-    [textPosition]
+    [textPosition],
   );
 
   const handleTextTouchStart = useCallback(
@@ -224,7 +243,7 @@ export const TextBehindEditor = () => {
         startPos: { ...textPosition },
       };
     },
-    [textPosition]
+    [textPosition],
   );
 
   useEffect(() => {
@@ -280,10 +299,12 @@ export const TextBehindEditor = () => {
     <Card className="bg-white rounded-lg shadow-lg p-8">
       <div className="grid md:grid-cols-[1fr,260px] gap-8">
         <div className="relative">
-          <div className="border-2 border-dashed border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center aspect-[3/4] max-h-[560px]">
+          <div className="border-2 border-dashed border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center aspect-[3/4] max-h-[max-content]">
             {!imagePreview ? (
               <div className="flex flex-col items-center justify-center text-gray-400 py-12 px-4">
-                <p className="text-center mb-2">Upload an image to get started</p>
+                <p className="text-center mb-2">
+                  Upload an image to get started
+                </p>
                 <p className="text-sm">Supports PNG, JPG, JPEG</p>
                 <p className="text-sm mt-4 text-gray-500">
                   Object will be isolated automatically
@@ -294,7 +315,9 @@ export const TextBehindEditor = () => {
                 {isProcessing && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 z-30 rounded-lg">
                     <Loader2 className="h-12 w-12 animate-spin text-white mb-2" />
-                    <p className="text-white">Separating background and object...</p>
+                    <p className="text-white">
+                      Separating background and object...
+                    </p>
                     <p className="text-white/80 text-sm mt-1">
                       {Math.round(progress * 100)}%
                     </p>
@@ -317,7 +340,10 @@ export const TextBehindEditor = () => {
                             className="max-w-full max-h-full w-auto h-auto object-contain"
                             onLoad={(e) => {
                               const img = e.currentTarget;
-                              setImageDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+                              setImageDimensions({
+                                width: img.naturalWidth,
+                                height: img.naturalHeight,
+                              });
                             }}
                           />
                           <img
@@ -325,7 +351,7 @@ export const TextBehindEditor = () => {
                             alt="Subject"
                             className={cn(
                               "max-w-full max-h-full w-auto h-auto object-contain absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
-                              previewTextOnTop ? "opacity-60" : "z-10"
+                              previewTextOnTop ? "opacity-60" : "z-10",
                             )}
                           />
                         </>
@@ -336,7 +362,10 @@ export const TextBehindEditor = () => {
                           className="max-w-full max-h-full w-auto h-auto object-contain"
                           onLoad={(e) => {
                             const img = e.currentTarget;
-                            setImageDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+                            setImageDimensions({
+                              width: img.naturalWidth,
+                              height: img.naturalHeight,
+                            });
                           }}
                         />
                       )}
@@ -366,7 +395,8 @@ export const TextBehindEditor = () => {
                       tabIndex={0}
                       aria-label="Drag to reposition text"
                       onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") e.preventDefault();
+                        if (e.key === "Enter" || e.key === " ")
+                          e.preventDefault();
                       }}
                     />
                   </div>
@@ -379,7 +409,10 @@ export const TextBehindEditor = () => {
 
         <div className="space-y-6">
           <div>
-            <Label htmlFor="image-upload" className="text-lg font-semibold text-gray-700 mb-2 block">
+            <Label
+              htmlFor="image-upload"
+              className="text-lg font-semibold text-gray-700 mb-2 block"
+            >
               Upload Image
             </Label>
             <Input
