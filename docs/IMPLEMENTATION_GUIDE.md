@@ -64,7 +64,7 @@ This guide documents the implementation of new features for the Overlayly (Text 
 ---
 
 ### Feature 3: Export Format Options
-**Status:** Pending | **Priority:** P1
+**Status:** Done | **Priority:** P1
 
 **Description:** Download as PNG, JPEG, or WebP; optional resolution scale.
 
@@ -87,7 +87,7 @@ This guide documents the implementation of new features for the Overlayly (Text 
 ---
 
 ### Feature 4: Enhanced Font Library
-**Status:** Pending | **Priority:** P1
+**Status:** Done | **Priority:** P1
 
 **Description:** Add Google Fonts; font search/filter.
 
@@ -110,7 +110,7 @@ This guide documents the implementation of new features for the Overlayly (Text 
 ---
 
 ### Feature 5: Background Customization
-**Status:** Pending | **Priority:** P1
+**Status:** Done | **Priority:** P1
 
 **Description:** Replace background with solid color, gradient, or blur.
 
