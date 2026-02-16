@@ -12,10 +12,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Upload, Download, Loader2 } from "lucide-react";
+import { Upload, Download, Loader2, Plus, Trash2, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { segmentImage } from "@/lib/backgroundRemoval";
 import { cn } from "@/lib/utils";
+import type { TextLayer } from "@/types/textLayer";
+import {
+  createDefaultTextLayer,
+} from "@/types/textLayer";
 
 const FONT_FAMILIES = [
   "Arial",
@@ -44,20 +48,16 @@ export const TextBehindEditor = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const [textContent, setTextContent] = useState("TEXT");
-  const [fontSize, setFontSize] = useState(100);
-  const [textColor, setTextColor] = useState("#fbbf24");
-  const [fontFamily, setFontFamily] = useState("Arial");
-  const [fontWeight, setFontWeight] = useState(700);
-  const [textOpacity, setTextOpacity] = useState(1);
-  const [textRotation, setTextRotation] = useState(0);
-  const [textPosition, setTextPosition] = useState({ x: 0.5, y: 0.5 });
+  const [textLayers, setTextLayers] = useState<TextLayer[]>([]);
+  const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const [previewTextOnTop, setPreviewTextOnTop] = useState(true);
   const dragRef = useRef<{
     startX: number;
     startY: number;
     startPos: { x: number; y: number };
   } | null>(null);
+
+  const selectedLayer = textLayers.find((l) => l.id === selectedLayerId);
 
   const handleImageUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,6 +77,8 @@ export const TextBehindEditor = () => {
         return null;
       });
       setImageDimensions(null);
+      setTextLayers([]);
+      setSelectedLayerId(null);
 
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -112,7 +114,7 @@ export const TextBehindEditor = () => {
           if (prev) URL.revokeObjectURL(prev);
           return URL.createObjectURL(foreground);
         });
-        toast.success("Ready! Drag the text to position it.");
+        toast.success("Ready! Add text and drag to position.");
       } catch (err) {
         if (!cancelled) {
           const msg =
@@ -132,6 +134,50 @@ export const TextBehindEditor = () => {
       cancelled = true;
     };
   }, [imagePreview]);
+
+  const handleAddLayer = useCallback(() => {
+    const newLayer = createDefaultTextLayer();
+    setTextLayers((prev) => [...prev, newLayer]);
+    setSelectedLayerId(newLayer.id);
+    toast.success("Text layer added!");
+  }, []);
+
+  const handleRemoveLayer = useCallback(
+    (id: string) => {
+      setTextLayers((prev) => prev.filter((l) => l.id !== id));
+      setSelectedLayerId((curr) => (curr === id ? null : curr));
+      toast.success("Layer removed!");
+    },
+    [],
+  );
+
+  const handleDuplicateLayer = useCallback(
+    (id: string) => {
+      const layer = textLayers.find((l) => l.id === id);
+      if (!layer) return;
+      const newLayer: TextLayer = {
+        ...layer,
+        id: crypto.randomUUID(),
+        position: {
+          x: Math.min(1, layer.position.x + 0.05),
+          y: Math.min(1, layer.position.y + 0.05),
+        },
+      };
+      setTextLayers((prev) => [...prev, newLayer]);
+      setSelectedLayerId(newLayer.id);
+      toast.success("Layer duplicated!");
+    },
+    [textLayers],
+  );
+
+  const handleUpdateLayer = useCallback(
+    (id: string, updates: Partial<TextLayer>) => {
+      setTextLayers((prev) =>
+        prev.map((l) => (l.id === id ? { ...l, ...updates } : l)),
+      );
+    },
+    [],
+  );
 
   const handleDownload = useCallback(() => {
     const canvas = canvasRef.current;
@@ -160,19 +206,26 @@ export const TextBehindEditor = () => {
 
       ctx.drawImage(bgImg, 0, 0);
 
-      ctx.save();
-      ctx.globalAlpha = textOpacity;
-      ctx.fillStyle = textColor;
-      ctx.font = `normal ${fontWeight} ${fontSize}px ${fontFamily}`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      const textX = textPosition.x * width;
-      const textY = textPosition.y * height;
-      ctx.translate(textX, textY);
-      ctx.rotate((textRotation * Math.PI) / 180);
-      ctx.translate(-textX, -textY);
-      ctx.fillText(textContent || "TEXT", textX, textY, Math.max(20, width - 40));
-      ctx.restore();
+      textLayers.forEach((layer) => {
+        ctx.save();
+        ctx.globalAlpha = layer.opacity;
+        ctx.fillStyle = layer.color;
+        ctx.font = `normal ${layer.fontWeight} ${layer.fontSize}px ${layer.fontFamily}`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const textX = layer.position.x * width;
+        const textY = layer.position.y * height;
+        ctx.translate(textX, textY);
+        ctx.rotate((layer.rotation * Math.PI) / 180);
+        ctx.translate(-textX, -textY);
+        ctx.fillText(
+          layer.content || "TEXT",
+          textX,
+          textY,
+          Math.max(20, width - 40),
+        );
+        ctx.restore();
+      });
 
       ctx.drawImage(fgImg, 0, 0);
 
@@ -192,7 +245,12 @@ export const TextBehindEditor = () => {
     };
 
     const tryDraw = () => {
-      if (bgImg.complete && fgImg.complete && bgImg.naturalWidth > 0 && bgImg.naturalHeight > 0) {
+      if (
+        bgImg.complete &&
+        fgImg.complete &&
+        bgImg.naturalWidth > 0 &&
+        bgImg.naturalHeight > 0
+      ) {
         draw();
       }
     };
@@ -204,18 +262,7 @@ export const TextBehindEditor = () => {
 
     bgImg.src = backgroundImageUrl;
     fgImg.src = foregroundImageUrl;
-  }, [
-    backgroundImageUrl,
-    foregroundImageUrl,
-    textContent,
-    textColor,
-    fontSize,
-    fontFamily,
-    fontWeight,
-    textOpacity,
-    textRotation,
-    textPosition,
-  ]);
+  }, [backgroundImageUrl, foregroundImageUrl, textLayers]);
 
   const showPreview = !!imagePreview;
   const isProcessed = !!backgroundImageUrl && !!foregroundImageUrl;
@@ -224,39 +271,42 @@ export const TextBehindEditor = () => {
 
   const handleTextMouseDown = useCallback(
     (e: React.MouseEvent) => {
+      if (!selectedLayerId) return;
       e.preventDefault();
       dragRef.current = {
         startX: e.clientX,
         startY: e.clientY,
-        startPos: { ...textPosition },
+        startPos: { ...(selectedLayer?.position ?? { x: 0.5, y: 0.5 }) },
       };
     },
-    [textPosition],
+    [selectedLayerId, selectedLayer],
   );
 
   const handleTextTouchStart = useCallback(
     (e: React.TouchEvent) => {
+      if (!selectedLayerId) return;
       const touch = e.touches[0];
       dragRef.current = {
         startX: touch.clientX,
         startY: touch.clientY,
-        startPos: { ...textPosition },
+        startPos: { ...(selectedLayer?.position ?? { x: 0.5, y: 0.5 }) },
       };
     },
-    [textPosition],
+    [selectedLayerId, selectedLayer],
   );
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!dragRef.current) return;
+      if (!dragRef.current || !selectedLayerId) return;
       const container = containerRef.current;
       if (!container) return;
       const rect = container.getBoundingClientRect();
       const deltaX = (e.clientX - dragRef.current.startX) / rect.width;
       const deltaY = (e.clientY - dragRef.current.startY) / rect.height;
-      setTextPosition({
-        x: Math.max(0, Math.min(1, dragRef.current.startPos.x + deltaX)),
-        y: Math.max(0, Math.min(1, dragRef.current.startPos.y + deltaY)),
+      const newX = Math.max(0, Math.min(1, dragRef.current.startPos.x + deltaX));
+      const newY = Math.max(0, Math.min(1, dragRef.current.startPos.y + deltaY));
+      handleUpdateLayer(selectedLayerId, {
+        position: { x: newX, y: newY },
       });
     };
 
@@ -265,7 +315,7 @@ export const TextBehindEditor = () => {
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (!dragRef.current) return;
+      if (!dragRef.current || !selectedLayerId) return;
       e.preventDefault();
       const touch = e.touches[0];
       const container = containerRef.current;
@@ -273,9 +323,10 @@ export const TextBehindEditor = () => {
       const rect = container.getBoundingClientRect();
       const deltaX = (touch.clientX - dragRef.current.startX) / rect.width;
       const deltaY = (touch.clientY - dragRef.current.startY) / rect.height;
-      setTextPosition({
-        x: Math.max(0, Math.min(1, dragRef.current.startPos.x + deltaX)),
-        y: Math.max(0, Math.min(1, dragRef.current.startPos.y + deltaY)),
+      const newX = Math.max(0, Math.min(1, dragRef.current.startPos.x + deltaX));
+      const newY = Math.max(0, Math.min(1, dragRef.current.startPos.y + deltaY));
+      handleUpdateLayer(selectedLayerId, {
+        position: { x: newX, y: newY },
       });
     };
 
@@ -293,11 +344,11 @@ export const TextBehindEditor = () => {
       window.removeEventListener("touchmove", handleTouchMove);
       window.removeEventListener("touchend", handleTouchEnd);
     };
-  }, []);
+  }, [selectedLayerId, handleUpdateLayer]);
 
   return (
     <Card className="bg-white rounded-lg shadow-lg p-8">
-      <div className="grid md:grid-cols-[1fr,260px] gap-8">
+      <div className="grid md:grid-cols-[1fr,280px] gap-8">
         <div className="relative">
           <div className="border-2 border-dashed border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center aspect-[3/4] max-h-[max-content]">
             {!imagePreview ? (
@@ -370,30 +421,42 @@ export const TextBehindEditor = () => {
                         />
                       )}
                     </div>
+                    {textLayers.map((layer) => (
+                      <div
+                        key={layer.id}
+                        className="absolute inset-0 select-none pointer-events-none"
+                        style={{
+                          left: `${layer.position.x * 100}%`,
+                          top: `${layer.position.y * 100}%`,
+                          transform: `translate(-50%, -50%) rotate(${layer.rotation}deg)`,
+                          fontSize: `${layer.fontSize}px`,
+                          fontWeight: layer.fontWeight,
+                          color: layer.color,
+                          fontFamily: layer.fontFamily,
+                          opacity: layer.opacity,
+                          zIndex: previewTextOnTop ? 20 : 5,
+                          boxShadow:
+                            selectedLayerId === layer.id
+                              ? "0 0 0 2px rgb(59 130 246)"
+                              : undefined,
+                        }}
+                        aria-hidden="true"
+                      >
+                        {layer.content || "TEXT"}
+                      </div>
+                    ))}
                     <div
-                      className="absolute inset-0 select-none pointer-events-none"
-                      style={{
-                        left: `${textPosition.x * 100}%`,
-                        top: `${textPosition.y * 100}%`,
-                        transform: `translate(-50%, -50%) rotate(${textRotation}deg)`,
-                        fontSize: `${fontSize}px`,
-                        fontWeight,
-                        color: textColor,
-                        fontFamily,
-                        opacity: textOpacity,
-                        zIndex: previewTextOnTop ? 20 : 5,
-                      }}
-                      aria-hidden="true"
-                    >
-                      {textContent || "TEXT"}
-                    </div>
-                    <div
-                      className="absolute inset-0 z-20 cursor-grab active:cursor-grabbing"
+                      className={cn(
+                        "absolute inset-0 z-20",
+                        selectedLayerId
+                          ? "cursor-grab active:cursor-grabbing"
+                          : "cursor-default",
+                      )}
                       onMouseDown={handleTextMouseDown}
                       onTouchStart={handleTextTouchStart}
                       role="button"
                       tabIndex={0}
-                      aria-label="Drag to reposition text"
+                      aria-label="Drag to reposition selected text"
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ")
                           e.preventDefault();
@@ -431,108 +494,209 @@ export const TextBehindEditor = () => {
             </Button>
           </div>
 
-          {(isProcessed || imagePreview) && (
+          {isProcessed && (
             <>
-              <div className="space-y-4">
-                <Label className="text-lg font-semibold text-gray-700 block">
-                  Customize Text
-                </Label>
-                <Input
-                  value={textContent}
-                  onChange={(e) => setTextContent(e.target.value)}
-                  placeholder="Enter text"
-                />
-                <div>
-                  <Label className="text-sm font-medium text-gray-700 block mb-2">
-                    Font Family
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-lg font-semibold text-gray-700">
+                    Text Layers
                   </Label>
-                  <Select value={fontFamily} onValueChange={setFontFamily}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {FONT_FAMILIES.map((font) => (
-                        <SelectItem key={font} value={font}>
-                          {font}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleAddLayer}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    <Plus className="mr-1 h-4 w-4" />
+                    Add
+                  </Button>
                 </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-700 block mb-2">
-                    Font Weight
-                  </Label>
-                  <Slider
-                    value={[fontWeight]}
-                    onValueChange={(v) => setFontWeight(v[0])}
-                    min={100}
-                    max={900}
-                    step={100}
-                  />
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-700 block mb-2">
-                    Font Size
-                  </Label>
-                  <Slider
-                    value={[fontSize]}
-                    onValueChange={(v) => setFontSize(v[0])}
-                    min={24}
-                    max={240}
-                    step={4}
-                  />
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-700 block mb-2">
-                    Color
+                {textLayers.length === 0 ? (
+                  <p className="text-sm text-gray-500 py-2">
+                    No layers yet. Click Add to create one.
+                  </p>
+                ) : (
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {textLayers.map((layer, idx) => (
+                      <div
+                        key={layer.id}
+                        className={cn(
+                          "flex items-center gap-2 p-2 rounded-md border text-sm",
+                          selectedLayerId === layer.id
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-200 hover:bg-gray-50",
+                        )}
+                      >
+                        <button
+                          type="button"
+                          className="flex-1 text-left truncate min-w-0"
+                          onClick={() => setSelectedLayerId(layer.id)}
+                          aria-label={`Select layer ${idx + 1}: ${layer.content || "TEXT"}`}
+                        >
+                          {layer.content || `Layer ${idx + 1}`}
+                        </button>
+                        <div className="flex gap-1 shrink-0">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleDuplicateLayer(layer.id)}
+                            aria-label="Duplicate layer"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleRemoveLayer(layer.id)}
+                            aria-label="Remove layer"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {selectedLayer && (
+                <div className="space-y-4 border-t pt-4">
+                  <Label className="text-lg font-semibold text-gray-700 block">
+                    Edit Selected Layer
                   </Label>
                   <Input
-                    type="color"
-                    value={textColor}
-                    onChange={(e) => setTextColor(e.target.value)}
-                    className="h-10 p-1 w-full border rounded-md cursor-pointer"
+                    value={selectedLayer.content}
+                    onChange={(e) =>
+                      handleUpdateLayer(selectedLayer.id, {
+                        content: e.target.value,
+                      })
+                    }
+                    placeholder="Enter text"
                   />
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 block mb-2">
+                      Font Family
+                    </Label>
+                    <Select
+                      value={selectedLayer.fontFamily}
+                      onValueChange={(v) =>
+                        handleUpdateLayer(selectedLayer.id, {
+                          fontFamily: v,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FONT_FAMILIES.map((font) => (
+                          <SelectItem key={font} value={font}>
+                            {font}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 block mb-2">
+                      Font Weight
+                    </Label>
+                    <Slider
+                      value={[selectedLayer.fontWeight]}
+                      onValueChange={(v) =>
+                        handleUpdateLayer(selectedLayer.id, {
+                          fontWeight: v[0],
+                        })
+                      }
+                      min={100}
+                      max={900}
+                      step={100}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 block mb-2">
+                      Font Size
+                    </Label>
+                    <Slider
+                      value={[selectedLayer.fontSize]}
+                      onValueChange={(v) =>
+                        handleUpdateLayer(selectedLayer.id, {
+                          fontSize: v[0],
+                        })
+                      }
+                      min={24}
+                      max={240}
+                      step={4}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 block mb-2">
+                      Color
+                    </Label>
+                    <Input
+                      type="color"
+                      value={selectedLayer.color}
+                      onChange={(e) =>
+                        handleUpdateLayer(selectedLayer.id, {
+                          color: e.target.value,
+                        })
+                      }
+                      className="h-10 p-1 w-full border rounded-md cursor-pointer"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 block mb-2">
+                      Opacity
+                    </Label>
+                    <Slider
+                      value={[selectedLayer.opacity]}
+                      onValueChange={(v) =>
+                        handleUpdateLayer(selectedLayer.id, {
+                          opacity: v[0],
+                        })
+                      }
+                      min={0}
+                      max={1}
+                      step={0.1}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 block mb-2">
+                      Rotation
+                    </Label>
+                    <Slider
+                      value={[selectedLayer.rotation]}
+                      onValueChange={(v) =>
+                        handleUpdateLayer(selectedLayer.id, {
+                          rotation: v[0],
+                        })
+                      }
+                      min={-180}
+                      max={180}
+                      step={5}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium text-gray-700">
+                      Show text on top (for positioning)
+                    </Label>
+                    <Switch
+                      checked={previewTextOnTop}
+                      onCheckedChange={setPreviewTextOnTop}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-700 block mb-2">
-                    Opacity
-                  </Label>
-                  <Slider
-                    value={[textOpacity]}
-                    onValueChange={(v) => setTextOpacity(v[0])}
-                    min={0}
-                    max={1}
-                    step={0.1}
-                  />
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-700 block mb-2">
-                    Rotation
-                  </Label>
-                  <Slider
-                    value={[textRotation]}
-                    onValueChange={(v) => setTextRotation(v[0])}
-                    min={-180}
-                    max={180}
-                    step={5}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium text-gray-700">
-                    Show text on top (for positioning)
-                  </Label>
-                  <Switch
-                    checked={previewTextOnTop}
-                    onCheckedChange={setPreviewTextOnTop}
-                  />
-                </div>
-              </div>
+              )}
 
               {isProcessed && (
                 <Button
                   onClick={handleDownload}
                   className="w-full bg-green-600 hover:bg-green-700 text-white"
+                  disabled={textLayers.length === 0}
                 >
                   <Download className="mr-2 h-4 w-4" />
                   Download Image
