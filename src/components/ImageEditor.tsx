@@ -40,6 +40,23 @@ export const ImageEditor = () => {
   const [hasImage, setHasImage] = useState(false);
 
   useEffect(() => {
+    if (!selectedLayerId) return;
+    const layer = textLayers.find((l) => l.id === selectedLayerId);
+    if (!layer) return;
+    setFontSize(layer.fontSize);
+    setFontWeight(layer.fontWeight);
+    setTextColor((layer.text.fill as string) ?? "#ffffff");
+    setOpacity(layer.opacity);
+    setRotation(layer.rotation);
+    setHorizontalTilt(layer.horizontalTilt);
+    setVerticalTilt(layer.verticalTilt);
+    setPositionX(layer.text.left ?? 400);
+    setPositionY(layer.text.top ?? 300);
+    setFontFamily(layer.fontFamily ?? "Arial");
+    setTextContent(layer.content);
+  }, [selectedLayerId]);
+
+  useEffect(() => {
     if (!canvasRef.current) return;
 
     const canvas = new FabricCanvas(canvasRef.current, {
@@ -249,8 +266,11 @@ export const ImageEditor = () => {
   };
 
   useEffect(() => {
+    if (!selectedLayerId || !fabricCanvas) return;
     updateSelectedText();
   }, [
+    selectedLayerId,
+    fabricCanvas,
     fontSize,
     fontWeight,
     textColor,
