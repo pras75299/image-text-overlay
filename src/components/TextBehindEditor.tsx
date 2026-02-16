@@ -30,14 +30,21 @@ import { createDefaultTextLayer } from "@/types/textLayer";
 import { useHistory } from "@/hooks/useHistory";
 
 const FONT_FAMILIES = [
-  "Arial",
-  "Times New Roman",
-  "Helvetica",
-  "Verdana",
-  "Georgia",
-  "Courier New",
-  "Impact",
-  "Comic Sans MS",
+  { name: "Arial", family: "Arial" },
+  { name: "Times New Roman", family: "Times New Roman" },
+  { name: "Helvetica", family: "Helvetica" },
+  { name: "Georgia", family: "Georgia" },
+  { name: "Impact", family: "Impact" },
+  { name: "Bebas Neue", family: "Bebas Neue, sans-serif" },
+  { name: "Inter", family: "Inter, sans-serif" },
+  { name: "Montserrat", family: "Montserrat, sans-serif" },
+  { name: "Oswald", family: "Oswald, sans-serif" },
+  { name: "Playfair Display", family: "Playfair Display, serif" },
+  { name: "Poppins", family: "Poppins, sans-serif" },
+  { name: "Raleway", family: "Raleway, sans-serif" },
+  { name: "Roboto", family: "Roboto, sans-serif" },
+  { name: "Source Sans 3", family: "Source Sans 3, sans-serif" },
+  { name: "Space Grotesk", family: "Space Grotesk, sans-serif" },
 ];
 
 export const TextBehindEditor = () => {
@@ -725,8 +732,12 @@ export const TextBehindEditor = () => {
                       </SelectTrigger>
                       <SelectContent>
                         {FONT_FAMILIES.map((font) => (
-                          <SelectItem key={font} value={font}>
-                            {font}
+                          <SelectItem
+                            key={font.family}
+                            value={font.family}
+                            style={{ fontFamily: font.family }}
+                          >
+                            {font.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
