@@ -68,6 +68,8 @@ export const TextBehindEditor = () => {
   } = useHistory<TextLayer[]>([]);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const [previewTextOnTop, setPreviewTextOnTop] = useState(true);
+  const [exportFormat, setExportFormat] = useState<"png" | "jpeg" | "webp">("png");
+  const [exportQuality, setExportQuality] = useState(0.92);
   const dragRef = useRef<{
     startX: number;
     startY: number;
@@ -231,6 +233,11 @@ export const TextBehindEditor = () => {
       canvas.width = width;
       canvas.height = height;
 
+      if (exportFormat !== "png") {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, width, height);
+      }
+
       ctx.drawImage(bgImg, 0, 0);
 
       textLayers.forEach((layer) => {
@@ -256,15 +263,40 @@ export const TextBehindEditor = () => {
 
       ctx.drawImage(fgImg, 0, 0);
 
+      const mimeType =
+        exportFormat === "png"
+          ? "image/png"
+          : exportFormat === "jpeg"
+            ? "image/jpeg"
+            : "image/webp";
+      const extension =
+        exportFormat === "png"
+          ? "png"
+          : exportFormat === "jpeg"
+            ? "jpg"
+            : "webp";
+      const quality = exportFormat === "png" ? undefined : exportQuality;
+
       try {
-        const dataUrl = canvas.toDataURL("image/png");
-        const link = document.createElement("a");
-        link.download = "text-behind-object.png";
-        link.href = dataUrl;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        toast.success("Image downloaded!");
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              toast.error("Failed to generate image");
+              return;
+            }
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.download = `text-behind-object.${extension}`;
+            link.href = url;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            toast.success("Image downloaded!");
+          },
+          mimeType,
+          quality,
+        );
       } catch (err) {
         console.error("Download failed:", err);
         toast.error("Failed to generate image");
@@ -289,7 +321,13 @@ export const TextBehindEditor = () => {
 
     bgImg.src = backgroundImageUrl;
     fgImg.src = foregroundImageUrl;
-  }, [backgroundImageUrl, foregroundImageUrl, textLayers]);
+  }, [
+    backgroundImageUrl,
+    foregroundImageUrl,
+    textLayers,
+    exportFormat,
+    exportQuality,
+  ]);
 
   const showPreview = !!imagePreview;
   const isProcessed = !!backgroundImageUrl && !!foregroundImageUrl;
@@ -786,14 +824,55 @@ export const TextBehindEditor = () => {
               )}
 
               {isProcessed && (
-                <Button
-                  onClick={handleDownload}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white"
-                  disabled={textLayers.length === 0}
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Download Image
-                </Button>
+                <>
+                  <div className="space-y-3 border-t pt-4">
+                    <Label className="text-sm font-semibold text-gray-700 block">
+                      Export Options
+                    </Label>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-600 block mb-1">
+                        Format
+                      </Label>
+                      <Select
+                        value={exportFormat}
+                        onValueChange={(v: "png" | "jpeg" | "webp") =>
+                          setExportFormat(v)
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="png">PNG (lossless)</SelectItem>
+                          <SelectItem value="jpeg">JPEG</SelectItem>
+                          <SelectItem value="webp">WebP</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {exportFormat !== "png" && (
+                      <div>
+                        <Label className="text-xs font-medium text-gray-600 block mb-1">
+                          Quality: {Math.round(exportQuality * 100)}%
+                        </Label>
+                        <Slider
+                          value={[exportQuality]}
+                          onValueChange={(v) => setExportQuality(v[0])}
+                          min={0.1}
+                          max={1}
+                          step={0.05}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <Button
+                    onClick={handleDownload}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                    disabled={textLayers.length === 0}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Image
+                  </Button>
+                </>
               )}
             </>
           )}
